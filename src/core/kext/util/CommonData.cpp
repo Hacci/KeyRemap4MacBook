@@ -203,7 +203,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 		//if(pre_index2_ == -1)	でもいい。2011.03.29(火)
 	    // 最初のキー入力と同時に､Core.cppで初期化が実行できるようにするため。
 	  	wsd_save_[wsdSET] = current_workspacedata_;	// 現在値を保存(この値に意味は無い)。これによりこれ以降はここには入らない。
-//後で 	  	RemapFunc::KeyToKey::static_set_pass_initialize(RemapFunc::KeyToKey::INIT_DO);	// すぐに初期化するため。
+	  	RemapFunc::KeyToKey::static_set_pass_initialize(RemapFunc::KeyToKey::INIT_DO);	// すぐに初期化するため。
 		set_indexes_directly(-1, index00, -1);	//2011.04.11(月)
 	  }
 	  wsd_save_[index00] = current_workspacedata_;	//学習
