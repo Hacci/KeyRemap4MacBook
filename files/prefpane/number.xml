@@ -52,5 +52,14 @@
       <name>[Pointing Device] CursorMove to ScrollWheel Rate</name>
       <identifier essential="true" default="150" step="10" baseunit="/ 1000">pointing.relative2scroll_rate</identifier>
     </item>
+
+
+    <item><!-- Haci 連打対策 10.2.15、2011.02.04(金), 03.09(水)-->
+      <name>[Key interval] Timeout for Japanese-Inputmode switching Delay</name>
+      <identifier essential="true" default="1000" step="10" baseunit="ms">parameter.keyinterval_timeout</identifier>
+    </item>
+
+
+
   </list>
 </root>

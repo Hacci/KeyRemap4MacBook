@@ -77,6 +77,44 @@
             </item>
           </list>
         </item>
+
+
+        <item>
+          <name> Japanese-Inputmode switching Delay : MacOS Bug</name>
+          <list>
+            <item>
+              <name>Perfectly remove Typos just when switching Inputmode </name><!-- Haci 2011.03.06(日) -->
+              <appendix>入力モードが変わる瞬間に次のキーを押した時の誤入力の完全排除: 各workspacedataの学習</appendix>
+              <identifier essential="true">general.learn_workspacedata</identifier>
+            </item>
+
+            <item>
+              <name>Improve switching Delay</name><!-- Haci 2011.02.04(金) -->
+              <appendix>連打・リピート遅延対策: VK_JIS_TEMPORARY_RESTORE指定をいったん無視</appendix>
+              <identifier essential="true">general.ignore_vk_jis_temporary_restore</identifier>
+
+                <list>
+                  <item>
+                    <name> RESTORE after timeout</name><!-- Haci 2011.03.08(火) -->
+                    <appendix>VK_JIS_TEMPORARY_RESTOREを無視してからタイムアウト後に自動で戻す</appendix>
+                    <appendix>オフでも次のキーを押すと戻る</appendix>
+                    <appendix>parameter -- [Key interval] Timeoutでタイムアウト値を指定</appendix>
+                    <appendix>タイムアウト値はシステムのショートカット(Command+Space)のモード変更の捕捉用も兼ねる</appendix>
+                    <identifier essential="true">general.restore_after_timeout</identifier>
+                  </item>
+                </list>
+            </item>
+
+            <item>
+              <name>AINUモード(アイヌ)を使用</name><!-- Haci 2011.04.11(月) -->
+              <appendix>Smart英数・かなキーのとき</appendix>
+              <identifier essential="true">general.use_ainu</identifier>
+            </item>
+          </list>
+        </item>
+
+
+
       </list>
     </item>
 

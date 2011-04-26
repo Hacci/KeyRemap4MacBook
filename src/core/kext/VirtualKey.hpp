@@ -115,6 +115,25 @@ namespace org_pqrs_KeyRemap4MacBook {
     static KeyCode newkeycode_;
   };
 
+
+//Haci
+  // ----------------------------------------------------------------------
+  // 2011.03.29(火)
+  class Handle_VK_JIS_COMMAND_SPACE {
+  public:
+    static bool handle(const Params_KeyboardEventCallBack& params);
+
+  private:
+    // It is necessary to save toKeyCode for KeyUp.
+    // 2011.04.09(土)
+    //		仮想のキーダウン・アップがほぼ同時に実行される仕組みなので､
+    //		ダウンの時にこの値を決めておかないと､アップの処理が余計なところに入り込んでしまうから｡
+    static KeyCode newkeycode_;
+    static Flags   newflag_;
+  };
+
+
+
   bool handle_VK_JIS_BACKSLASH(const Params_KeyboardEventCallBack& params);
   bool handle_VK_JIS_YEN(const Params_KeyboardEventCallBack& params);
 

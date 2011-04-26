@@ -523,6 +523,45 @@ namespace org_pqrs_KeyRemap4MacBook {
   }
 
   KeyCode Handle_VK_JIS_TOGGLE_EISUU_KANA::newkeycode_;
+//Haci
+  KeyCode Handle_VK_JIS_COMMAND_SPACE::newkeycode_;
+  Flags   Handle_VK_JIS_COMMAND_SPACE::newflag_;
+  // ----------------------------------------------------------------------
+  // Command+Spaceのバグ(時々モード変更がおかしくなる)の代替策として作成を開始し､
+  // Command+Space、Option+Command+Spaceの不統一さ、使い難さを改良しつつ､
+  // Smart[英数/かな]キーへと到達した｡
+  // 12種類の仮想キーの組み合わせで､従来のCommand+Spaceの再現・改良〜Smart[英数/カナ]キーまでほぼ全てに対応する｡
+  // かわせみver1のバグ(ver2で改善予定とのメーカーの説明)、つまり、
+  // 「カナ入力」かつ「controlキーで英数入力する(初期値)」に設定した場合に､[ctl] を含むショートカットが誤動作するので、その設定を外すこと｡
+  // アイヌを「Option+かな」で与えると､通常は問題ないが､連続して切り替えると､Option抜きで実行されてしまうという「ことえり」のバグが判明した。「かわせみ」などでは問題ない｡
+  // Contol+Shift系のショートカットを使用すると問題ないことも判明したので､ひらがなモードなども含めて､全て､Contol+Shift系のショートカットを与えるようにした｡
+  // 2011.03.29(火)〜04.15(金)
+  // 2011.04.15(金) SEESAW_EISUU_OTHERSなど追加整理して､12種類の仮想キーとなった｡
+  bool
+  Handle_VK_JIS_COMMAND_SPACE::handle(const Params_KeyboardEventCallBack& params)
+  {
+	KeyCode key00  = params.key;
+
+    if (key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_CUR_PRE ||
+        key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_SKIP_NONE  ||
+        key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_MINUS_SKIP_NONE ||
+        key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_SKIP_PRE ||
+        key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_MINUS_SKIP_PRE ||
+
+        key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_EISUU_KANA ||
+        key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_EISUU_OTHERS ||
+        key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_KANA_EISUU ||
+        key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_KANA_OTHERS ||
+        key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_MINUS_SKIP_KANA_EISUU ||
+        key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_MINUS_SKIP_EISUU ||
+        key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_MINUS_SKIP_KANA){
+    } else {
+      return false;
+	}
+    return true;
+  }
+
+
 
   // ----------------------------------------------------------------------
   bool

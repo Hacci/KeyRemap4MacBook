@@ -212,6 +212,7 @@ namespace org_pqrs_KeyRemap4MacBook {
     if (Handle_VK_CHANGE_INPUTMODE::handle(params)) return;
     if (Handle_VK_CONFIG::handle(params)) return;
     if (Handle_VK_JIS_TOGGLE_EISUU_KANA::handle(params)) return;
+    if (Handle_VK_JIS_COMMAND_SPACE::handle(params)) return;			//Haci 2011.03.29
     if (handle_VK_JIS_BACKSLASH(params)) return;
     if (handle_VK_JIS_YEN(params)) return;
     if (Handle_VK_JIS_TEMPORARY::handle(params)) return;
