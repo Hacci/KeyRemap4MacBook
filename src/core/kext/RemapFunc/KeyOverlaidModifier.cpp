@@ -104,7 +104,26 @@ namespace org_pqrs_KeyRemap4MacBook {
     {
       bool savedIsAnyEventHappen = isAnyEventHappen_;
 
+
+//Haci
+	  RemapFunc::KeyToKey::static_set_case1_pass_restore(1);	//2011.03.02(水)
+		// KeyToKey(Case1)でリストア(モードを戻す)しないようにする。
+		// KeyOverlaidModifierはKeyToKeyを最大2回実行するという特殊な使い方をするが、
+		// 最初に以下のkeytokey_.remap(remapParams)で、KeyToKeyのCase1に先ずは行くので、そこでモードを戻さないようにフラグを立てる。
+		// そして、checkbox.xmlに他の設定があると､ここを何度も通ってしまうので､その時はresultが偽になるので、やはり、フラグを一旦落とす必要がある。
+		// 本関数のタイムアウト前にキーアップすると、本関数の後半部分の処理で､toKeys_fire群(VK系が含まれることも)がKeyToKeyのdefaultで実行される。
+
+
+
       bool result = keytokey_.remap(remapParams);
+
+
+//Haci
+	  RemapFunc::KeyToKey::static_set_case1_pass_restore(0);	//2011.03.03(木)
+	    	// KeyToKey(Case1)でリストアを実行できる状態に戻す。
+
+
+
       if (! result) return false;
 
       // ------------------------------------------------------------
@@ -151,6 +170,21 @@ namespace org_pqrs_KeyRemap4MacBook {
 
               keytokey_fire_.call_remap_with_VK_PSEUDO_KEY(EventType::DOWN);
               keytokey_fire_.call_remap_with_VK_PSEUDO_KEY(EventType::UP);
+
+
+//Haci
+            } else if(Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore)) {
+            	//タイムアウト後にfromKeyを押し続けて何もしないままキーアップしてそのキーが捨てられるので、ここでは元々は何もしないが、
+				// VK_JIS_TEMPORARY_RESTOREを無視するチェックボックスがオンの場合は､リストアを実行する。
+				// これは、最初のkeytokey_.remapのところでリストアしないので､機能キーを捨てる時は、リストアしなければならない。
+				// これが必要な例は､「3」キーを半角にリマップするキーを押して、モードが元に戻る前に､
+				// KeyOverlaidModifierのキーを押すと、押している間はモードが戻らず､キーアップしてもここでリストアしないと､そのままモードは戻らない。
+            	// 2011.03.03(木)〜04(金)
+///    			EventOutputQueue::FireKey::fire_downup(Flags(0), KeyCode::VK_JIS_TEMPORARY_RESTORE, remapParams.params.keyboardType);
+          		keytokey_.vk_restore(remapParams.params, 1);	//2011.03.04(金) 関数化: 引数は0でも1でもなぜか同じ。
+
+
+
             }
           }
           EventWatcher::unset(isAnyEventHappen_);
