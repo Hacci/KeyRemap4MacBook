@@ -145,6 +145,12 @@ namespace org_pqrs_KeyRemap4MacBook {
 
     static bool handle(const Params_KeyboardEventCallBack& params);
 
+
+//Haci
+    static void resetSavedIMD(void);		//2011.02.18(金)
+
+
+
   private:
     enum {
       KEYEVENT_DELAY_MS = 100,

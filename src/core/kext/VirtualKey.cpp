@@ -500,18 +500,55 @@ namespace org_pqrs_KeyRemap4MacBook {
   bool Handle_VK_MOUSEKEY::highspeed_;
   TimerWrapper Handle_VK_MOUSEKEY::fire_timer_;
 
+
+  //Haci
   // ----------------------------------------------------------------------
+  // 作業用のworkspacedataを使用することは、このトグルのケースでもメリットがある。
+  // 例えば､ひらがなモードでVK_JIS_TEMPORARY_ROMANにして半角の「7」を出すキーを打つや否や､このトグルキーを押すと､
+  // 本来は最初のひらがなモードの逆の英字モードになるのが正しい。ところが、従来のようにVK_JIS_TEMPORARY_RESTOREを実行していてもそれが完了していないので､
+  // このトグルキーによって､英字モードの状態からひらがなモードに戻ってしまう｡
+  // VK_JIS_TEMPORARY_RESTOREを無視する場合は、
+  // 作業用のworkspacedataが最初の状態を記憶して変化しないので､たとえモード変更を複数実行しているような場合であっても､正確に切り替わるという訳です。
+  // さらに、学習したworkspacedataを使ってすり替えることで､同時に次の文字キーを打鍵しても､正しく入力できる｡
+  //	2011.03.08(火)〜04.16(土)
   bool
   Handle_VK_JIS_TOGGLE_EISUU_KANA::handle(const Params_KeyboardEventCallBack& params)
   {
     if (params.key != KeyCode::VK_JIS_TOGGLE_EISUU_KANA) return false;
 
+
+//Haci
+    int ignore_vk_restore = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore);
+	  			//「連打遅延対策」を切り替えるチェックボックス
+	int learn_workspacedata = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata);
+				//「モード変更時の誤入力対策」を行うかどうかのチェックボックス。
+
     if (params.ex_iskeydown) {
-      if (InputMode::JAPANESE == CommonData::getcurrent_workspacedata().inputmode) {
+      if (!(ignore_vk_restore || learn_workspacedata) && InputMode::JAPANESE == CommonData::getcurrent_workspacedata().inputmode ||
+      	   (ignore_vk_restore || learn_workspacedata) && InputMode::JAPANESE == CommonData::getwsd_public().inputmode) {
+		// チェックボックスの設定のいずれかがオンなら作業用のworkspacedataを使用。
+
+
+
         newkeycode_ = KeyCode::JIS_EISUU;
       } else {
         newkeycode_ = KeyCode::JIS_KANA;
       }
+
+
+//Haci
+	  bool result00 = false;	//2011.04.16(土)
+	  if(learn_workspacedata){	// 学習機能の設定がチェックされていれば､作業用のworkspacedataをすり替える｡
+		result00 = CommonData::replace_WSD(newkeycode_, ModifierFlag::NONE);
+	  }
+	  if(result00){	//学習済ですり替えられたので､次のキー入力時にCore.cppでの更新をしないようにする。
+		RemapFunc::KeyToKey::static_set_pass_initialize(RemapFunc::KeyToKey::INIT_NOT);
+	  } else {	//workspacedataの学習をしない設定の場合を含めて、未学習の場合も､次のキーの時に、作業用のworkspacedataを更新する必要がある｡
+ 	  	RemapFunc::KeyToKey::static_set_pass_initialize(RemapFunc::KeyToKey::INIT_DO);
+	  }
+
+
+
     }
 
     Params_KeyboardEventCallBack::auto_ptr ptr(Params_KeyboardEventCallBack::alloc(params.eventType, params.flags, newkeycode_,
@@ -523,6 +560,8 @@ namespace org_pqrs_KeyRemap4MacBook {
   }
 
   KeyCode Handle_VK_JIS_TOGGLE_EISUU_KANA::newkeycode_;
+
+
 //Haci
   KeyCode Handle_VK_JIS_COMMAND_SPACE::newkeycode_;
   Flags   Handle_VK_JIS_COMMAND_SPACE::newflag_;
@@ -540,7 +579,16 @@ namespace org_pqrs_KeyRemap4MacBook {
   bool
   Handle_VK_JIS_COMMAND_SPACE::handle(const Params_KeyboardEventCallBack& params)
   {
+	int learn_workspacedata = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata);
+				// 「モード変更時の誤入力対策」を行うかどうかのチェックボックス。
+	int use_ainu = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_use_ainu);
+				// 「モード変更時の誤入力対策」を行うかどうかのチェックボックス。
 	KeyCode key00  = params.key;
+    int index00;
+    int skip00[CommonData::wsdMAX +1] = {0};	//2011.04.05(火)
+    int replace_num00;							//2011.04.05(火)
+	int seesawType00 = -1;
+	int skipType00   = -1;		//2011.04.15(金)
 
     if (key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_CUR_PRE ||
         key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_SKIP_NONE  ||
@@ -558,6 +606,153 @@ namespace org_pqrs_KeyRemap4MacBook {
     } else {
       return false;
 	}
+
+	if(params.ex_iskeydown){	//キーダウン時の処理(始まり)----------------------
+		//2011.04.09(土)pm03:19 キーアップは最後の部分のみ｡
+	  if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_CUR_PRE){ // シーソー切替
+		seesawType00 = CommonData::CUR_PRE;
+	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_EISUU_KANA){
+		seesawType00 = CommonData::EISUU_KANA;
+	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_KANA_OTHERS){
+		seesawType00 = CommonData::KANA_OTHERS;
+	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_KANA_EISUU){		//2011.04.15(金)
+		seesawType00 = CommonData::KANA_EISUU;
+	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_EISUU_OTHERS){	//2011.04.15(金)
+		seesawType00 = CommonData::EISUU_OTHERS;
+	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_SKIP_NONE){ // リプレース
+		skipType00 = CommonData::SKIP_NONE_PLUS;
+	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_SKIP_PRE){
+		skipType00 = CommonData::SKIP_PRE_PLUS;
+	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_MINUS_SKIP_NONE){
+		skipType00 = CommonData::SKIP_NONE_MINUS;
+	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_MINUS_SKIP_PRE){
+		skipType00 = CommonData::SKIP_PRE_MINUS;
+	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_MINUS_SKIP_KANA_EISUU){
+		skipType00 = CommonData::SKIP_EISUU_KANA;
+	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_MINUS_SKIP_KANA){	//2011.04.15(金)
+		skipType00 = CommonData::SKIP_KANA;
+	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_MINUS_SKIP_EISUU){	//2011.04.15(金)
+		skipType00 = CommonData::SKIP_EISUU;
+	  }
+
+	  newflag_ = ModifierFlag::NONE;	//2011.04.01(金)
+	  if(seesawType00 != -1){	// seesawの場合
+		index00 = CommonData::get_index_for_seesaw_AtoB_WSD(seesawType00);	// 2011.04.10(日)統合
+
+		if (seesawType00 == CommonData::EISUU_KANA   && index00 == CommonData::wsdEISU ||
+			seesawType00 == CommonData::KANA_OTHERS  && index00 == CommonData::wsdHIRA ||
+			seesawType00 == CommonData::KANA_EISUU   && index00 == CommonData::wsdHIRA ||
+			seesawType00 == CommonData::EISUU_OTHERS && index00 == CommonData::wsdEISU){
+			// 起点のモードに切り替えた時点からタイマーをかける｡
+			// タイムアウト後は、フラグseesaw_init2_が立つので、
+			// 次に同じseesawキーが押された時は､CommonData.hppの(後処理AA)が実行されて、モードは変化しない｡
+			// これで、トグル系の最大の欠点がついに解消｡
+			//2011.04.09(土)、15(金)
+			RemapFunc::KeyToKey::static_setTimeoutMS_seesaw_init();
+		}
+
+	  } else {	// replaceの場合
+		int sign00;	//符号= -1,1 
+		  if(skipType00 == CommonData::SKIP_EISUU_KANA ||
+		  	 skipType00 == CommonData::SKIP_KANA ||
+		  	 skipType00 == CommonData::SKIP_EISUU){
+		  	//2011.04.06(水)、15(金)、17(日)
+			CommonData::reverse_sign_REPLACE_PLUS_MINUS(9);	// カウンターを進める。次の時に､方向を逆転させるため｡
+		  }
+
+		  if(skipType00 == CommonData::SKIP_NONE_MINUS ||
+	  		 skipType00 == CommonData::SKIP_PRE_MINUS){
+			sign00 = -1;
+		  } else {	// REPLACE_MINUS,MINUS2の場合
+		  	// 2011.04.06(水) REPLACE_PLUS_MINUS_SKIP系もとりあえず､正方向とするが、この値は用いない。
+			sign00 =  1;
+		  }
+
+
+		if(!use_ainu){
+		   skip00[CommonData::wsdAINU] = 1;	// AINUをスキップする。
+											//2011.04.11(月) チェックボックスで設定するようにした｡
+		}
+		if(skipType00 == CommonData::SKIP_NONE_PLUS ||
+	  		 skipType00 == CommonData::SKIP_NONE_MINUS){
+			replace_num00 = 1;
+		} else {	// 2011.04.05(火)
+			if(skipType00 == CommonData::SKIP_EISUU_KANA){
+				skip00[CommonData::wsdEISU] = 1;	// 英字モードをスキップ
+				skip00[CommonData::wsdHIRA] = 1;	// ひらがなモード
+				replace_num00 = 3;
+			} else if(skipType00 == CommonData::SKIP_KANA){
+				skip00[CommonData::wsdHIRA] = 1;	// ひらがなモード
+				replace_num00 = 3;
+			} else if(skipType00 == CommonData::SKIP_EISUU){
+				skip00[CommonData::wsdEISU] = 1;	// 英字モード
+				replace_num00 = 3;
+			} else {	// SKIP_PRE_PLUS(MINUS)
+				replace_num00 = 2;
+				// スキップするのは前のモードなので､それは以下のget_index_for_replaceWSD関数の中で与えられる｡
+			}
+		}
+		index00 = CommonData::get_index_for_replaceWSD(sign00, skip00, replace_num00);	//2011.04.01(金)、05(火)
+	  }
+
+    if (index00 == CommonData::wsdEISU) {					//英字
+		// 2011.04.14(木) KeyCode::JIS_EISUU、ModifierFlag::NONE
+    	newkeycode_ = KeyCode::JIS_COLON;
+    	newflag_    = ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_L;
+    } else if (index00 == CommonData::wsdHIRA) {			//ひらがな
+		// 2011.04.14(木) KeyCode::JIS_KANA、ModifierFlag::NONE
+    	newkeycode_ = KeyCode::J;
+    	newflag_    = ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_L;
+    } else if (index00 == CommonData::wsdKATA) {			//カタカナ
+		// 2011.04.14(木) KeyCode::JIS_KANA、ModifierFlag::SHIFT_L
+    	newkeycode_ = KeyCode::K;
+    	newflag_    = ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_L;
+    } else if (index00 == CommonData::wsdHKAT) {			//半角カタカナ
+    	//2011.03.31(木)
+    	newkeycode_ = KeyCode::SEMICOLON;
+    	newflag_    = ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_L;
+    } else if (index00 == CommonData::wsdFEIS) {			//全角英数
+    	//2011.04.01(金)
+    	newkeycode_ = KeyCode::L;
+    	newflag_    = ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_L;
+    } else if (index00 == CommonData::wsdAINU) {			// AINU
+		// 2011.04.14(木) KeyCode::JIS_KANA、ModifierFlag::SHIFT_Lは、「ことえり」のバグのため突然おかしくなる｡
+    	newkeycode_ = KeyCode::JIS_BRACKET_RIGHT;
+    	newflag_    = ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_L;
+	} else {
+		return true;
+    }
+
+	}	 //------------- (キーダウン時の処理終わり)
+
+	if (params.ex_iskeydown) {	//2011.04.03(日)
+       FlagStatus::temporary_decrease(params.flags);
+       FlagStatus::temporary_increase(newflag_);
+	} else {
+      FlagStatus::temporary_decrease(newflag_);
+      FlagStatus::temporary_increase(params.flags);
+	}
+
+	if(params.ex_iskeydown){
+	  bool result00 = false;	//2011.04.16(土)
+	  if(learn_workspacedata){
+		result00 = CommonData::replace_WSD(newkeycode_, newflag_);	//作業用のworkspacedataをすり替える｡
+	  }
+	  if(result00){	//学習済ですり替えられたので､次のキー入力時にCore.cppでの更新をしないようにする。
+		RemapFunc::KeyToKey::static_set_pass_initialize(RemapFunc::KeyToKey::INIT_NOT);
+	  } else {		//workspacedataの学習をしない設定の場合を含めて、未学習の場合も､次のキーの時に、作業用のworkspacedataを更新する必要がある｡
+ 	  	RemapFunc::KeyToKey::static_set_pass_initialize(RemapFunc::KeyToKey::INIT_DO);
+	  }
+	}
+
+    Params_KeyboardEventCallBack::auto_ptr ptr(Params_KeyboardEventCallBack::alloc(params.eventType,
+    																			   FlagStatus::makeFlags(),
+    																			   newkeycode_,
+    																			   params.keyboardType,
+    																			   params.repeat));			//2011.04.03(日)
+    if (ptr) {
+      EventOutputQueue::FireKey::fire(*ptr);
+    }
     return true;
   }
 
@@ -604,6 +799,21 @@ namespace org_pqrs_KeyRemap4MacBook {
     fire_timer_.terminate();
   }
 
+
+//Haci
+//--------------------------------------------------------------------------------------------------------------------
+//	保存値savedinputmodedetail_, currentinputmodedetail_を初期化。
+//	Core.cppで使用｡
+//	2011.02.18(金)
+  void
+  Handle_VK_JIS_TEMPORARY::resetSavedIMD(void)
+  {
+        savedinputmodedetail_   = InputModeDetail::NONE;
+        currentinputmodedetail_ = InputModeDetail::NONE;
+  }
+
+
+
   bool
   Handle_VK_JIS_TEMPORARY::handle_core(const Params_KeyboardEventCallBack& params,
                                        KeyCode key,
@@ -613,8 +823,20 @@ namespace org_pqrs_KeyRemap4MacBook {
 
     if (params.ex_iskeydown) {
       if (savedinputmodedetail_ == InputModeDetail::NONE) {
-        savedinputmodedetail_ = CommonData::getcurrent_workspacedata().inputmodedetail;
-        currentinputmodedetail_ = CommonData::getcurrent_workspacedata().inputmodedetail;
+
+
+//Haci
+		// VK_RESTOREを含むキーの連打遅延対策あるいは入力モード変更キー押下時の遅延対策のため作業用のworkspacedataへすり替え
+		// 連打遅延対策あるいは学習機能を切り替えるチェックボックスの設定がオンの場合のみ｡
+		// 2011.02.10(木)、20(日)、03.08(火)
+		!(Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore) ||
+		  Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata)) ? 
+			savedinputmodedetail_ = CommonData::getcurrent_workspacedata().inputmodedetail :
+			savedinputmodedetail_ = CommonData::getwsd_public().inputmodedetail;
+        currentinputmodedetail_ = savedinputmodedetail_;
+
+
+
       }
       firekeytoinputdetail(params, inputmodedetail);
     }
@@ -629,6 +851,20 @@ namespace org_pqrs_KeyRemap4MacBook {
 
     if (params.ex_iskeydown) {
       if (savedinputmodedetail_ != InputModeDetail::NONE) {
+
+
+//Haci
+		// 学習したworkspacedataにすり替えることで､モードが戻る瞬間に次のキーが来ても誤入力を完全に排除できる。
+		// 「workspacedataの学習」を行うかどうかのチェックボックスがオンの場合のみ。
+		// リストアするということは既に学習済なので､INT_DOが必要なケースは無い｡
+		// 2011.03.07(月)、08(火)
+		if(Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata)){
+		  CommonData::restore_WSD(savedinputmodedetail_);
+		  RemapFunc::KeyToKey::static_set_pass_initialize(RemapFunc::KeyToKey::INIT_NOT);	//次のキー入力時にCore.cppでの更新をしないため
+		}
+
+
+
         firekeytoinputdetail(params, savedinputmodedetail_);
         savedinputmodedetail_ = InputModeDetail::NONE;
         currentinputmodedetail_ = InputModeDetail::NONE;
@@ -698,6 +934,22 @@ namespace org_pqrs_KeyRemap4MacBook {
     } else if (inputmodedetail == InputModeDetail::JAPANESE_KATAKANA) {
       fireKeyInfo_.flags = ModifierFlag::SHIFT_L;
       fireKeyInfo_.key = KeyCode::JIS_KANA;
+
+
+//Haci
+	// 半角カタカナ、全角英数にも戻れるようにする｡
+	// 「Option+かな」(AINU)は「ことえり」で誤動作するケースがあることがVK_COMMAND_SPACEの処理で判明したので､
+	//  ここでもControl+Shift系のショートカットを用いるようにした。
+	//  英数モードなども同様にした方がいいかもしれない｡
+	// 2011.4.12
+    } else if (inputmodedetail == InputModeDetail::JAPANESE_HALFWIDTH_KANA) {	//半角カタカナ
+      fireKeyInfo_.flags = ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_L;
+      fireKeyInfo_.key = KeyCode::SEMICOLON;
+    } else if (inputmodedetail == InputModeDetail::JAPANESE_FULLWIDTH_ROMAN) {	//全角英数
+      fireKeyInfo_.flags = ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_L;
+      fireKeyInfo_.key = KeyCode::L;
+
+
 
     } else if (inputmodedetail == InputModeDetail::AINU) {
       fireKeyInfo_.flags = ModifierFlag::OPTION_L;
