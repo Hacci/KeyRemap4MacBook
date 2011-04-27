@@ -106,7 +106,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 
 //Haci
-	  RemapFunc::KeyToKey::static_set_case1_pass_restore(1);	//2011.03.02(水)
+	  VirtualKey::static_set_case1_pass_restore(1);	//2011.03.02(水)
 		// KeyToKey(Case1)でリストア(モードを戻す)しないようにする。
 		// KeyOverlaidModifierはKeyToKeyを最大2回実行するという特殊な使い方をするが、
 		// 最初に以下のkeytokey_.remap(remapParams)で、KeyToKeyのCase1に先ずは行くので、そこでモードを戻さないようにフラグを立てる。
@@ -119,7 +119,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 
 //Haci
-	  RemapFunc::KeyToKey::static_set_case1_pass_restore(0);	//2011.03.03(木)
+	  VirtualKey::static_set_case1_pass_restore(0);	//2011.03.03(木)
 	    	// KeyToKey(Case1)でリストアを実行できる状態に戻す。
 
 
@@ -181,7 +181,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 				// KeyOverlaidModifierのキーを押すと、押している間はモードが戻らず､キーアップしてもここでリストアしないと､そのままモードは戻らない。
             	// 2011.03.03(木)〜04(金)
 ///    			EventOutputQueue::FireKey::fire_downup(Flags(0), KeyCode::VK_JIS_TEMPORARY_RESTORE, remapParams.params.keyboardType);
-          		keytokey_.vk_restore(remapParams.params, 1);	//2011.03.04(金) 関数化: 引数は0でも1でもなぜか同じ。
+          		VirtualKey::vk_restore(remapParams.params, 1);	//2011.03.04(金) 関数化: 引数は0でも1でもなぜか同じ。
 
 
 

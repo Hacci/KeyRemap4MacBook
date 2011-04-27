@@ -13,130 +13,6 @@
 namespace org_pqrs_KeyRemap4MacBook {
   namespace RemapFunc {
 
-
-//Haci
-    TimerWrapperRestore KeyToKey::timer_restore2_;		// 2011.01.31(月)
-    IOWorkLoop*  KeyToKey::workLoop_restore2_ = NULL;	// 2011.02.01(火)
-    int KeyToKey::callback2_ = CALLBACK_INIT;			// 2011.02.27(日)
-    int KeyToKey::pass_initialize2_ = INIT_NOT;			// 2011.03.01(火)インストールした時にその時点でのモードを活かすために最初のキー入力時はパスするため。
-	int KeyToKey::case1_pass_restore2_ = 0;				// 2011.03.02(水)
-
-//Haci
-	//=======================================
-	// この関数はCore.cppのstart()関数で使用するためのもの
-	//2011.01.31(月)〜02.10(木)
-    void
-    KeyToKey::static_initialize(IOWorkLoop& workloop)
-    {
-      timer_restore2_.initialize(&workloop, NULL, KeyToKey::timeoutAfterKey2);
-      workLoop_restore2_ = &workloop;
-    }
-
-//Haci
-	//=======================================
-	// この関数はCore.cppのstop()関数で使用するためのもの
-	//2011.02.01(火)
-    void
-    KeyToKey::static_terminate(void)
-    {
-      timer_restore2_.terminate();
-    }
-
-//Haci
-	//=======================================
-	// 外部からこのタイマーを停止するには、RemapFunc::KeyToKey::static_cancelTimeout()を実行する。
-	//2011.02.02(水)〜02.28(月)
-    void
-    KeyToKey::static_cancelTimeout(void)
-    {
-      timer_restore2_.cancelTimeout();	// タイマーを停止
-    }
-
-//Haci
-	//=======================================
-	// Core.cppで初期化をパスするかどうかを判断するためのフラグ変数pass_initialize2_の値を得る｡
-	// RemapFunc::KeyToKey::static_get_pass_initialize()を実行する。
-	//2011.03.01(火)
-    int
-    KeyToKey::static_get_pass_initialize(void)
-    {
-      return pass_initialize2_;
-    }
-
-
-//Haci
-	//=======================================
-	// Core.cppで初期化をパスするかどうかを判断するためのフラグ変数pass_initialize2_の値を変更
-	// RemapFunc::KeyToKey::static_set_pass_initialize(RemapFunc::KeyToKey::INIT_NOT or INIT_DO)を実行する。
-	//2011.03.01(火)
-    void
-    KeyToKey::static_set_pass_initialize(int pass_initialize00)
-    {
-	  if(pass_initialize00 != INIT_NOT && pass_initialize00 != INIT_DO) return;
-      pass_initialize2_ = pass_initialize00;
-    }
-
-//Haci
-	//=======================================
-	// 作業用のworkspacedataの初期化条件で専用タイマーを起動: これがこのタイマーの基本動作
-	// タイムアウト後に実行するコールバック関数は共通(実行する処理はフラグcallback2_で指定しておく)となる仕組みにしてある｡
-	// Core.cppでキーアップ時に必ず実行する。
-	// Core.cppから実行するには、RemapFunc::KeyToKey::static_setTimeoutMS_init()を実行する。
-	// KeyToKeyでVK_RESTOREを見つけたら、RESTORE用のタイマーとして再起動する｡タイマーが動いていても特に問題ない｡
-	// また、シーソー系のモード切替で、起点(固定)のモードになった時点で、それ用のタイマーとして再起動される｡
-	//2011.02.28(月)〜03.01(火)、11(金)、13(日)
-    void
-    KeyToKey::static_setTimeoutMS_init(void)
-    {
-	  int ignore_vk_restore = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore);
-		// 2011.03.13(日)VK_JIS_TEMPORARY_RESTOREを無視するチェックボックスのオンオフ値
-	  int learn_workspacedata = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata);
-		// 2011.03.13(日) 入力モード変更遅延対策の中の「入力モード変更時の誤入力対策」を行うかどうかのチェックボックス。通常はオン。
-	  int vk_restore_timeout = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_parameter_keyinterval_timeout);
-	  			// キー入力からタイムアウトするまでの時間(msec)
-	  if((ignore_vk_restore || learn_workspacedata)&& workLoop_restore2_){
-		callback2_  = CALLBACK_INIT;	// コールバック関数での条件(初期化)を指定
-		timer_restore2_.setTimeoutMS(vk_restore_timeout);
-		}
-
-    }
-
-//Haci
-	//=======================================
-	// seesaw系のモード切替で起点(固定)のモード(<<英字>>←→ひらがなの場合の英字等)になった時点で実行する｡
-	// タイムアウト後のコールバック関数でモードを変更しないためのフラグを立てる。
-	// 実行するには、RemapFunc::KeyToKey::static_setTimeoutMS_seesaw_init()を実行する。
-	//2011.04.09(土)
-    void
-    KeyToKey::static_setTimeoutMS_seesaw_init(void)
-    {
-	  int vk_restore_timeout = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_parameter_keyinterval_timeout);
-	  			// キー入力からタイムアウトするまでの時間(msec)
-		callback2_  = CALLBACK_SEESAW_INIT;	// コールバック関数での条件(seesaw初期化)を指定
-		timer_restore2_.setTimeoutMS(vk_restore_timeout);
-    }
-
-//Haci
-	//=======================================
-	// KeyToKey(Case1)でリストアを実行するか、しないかを決める。
-	// 今のところKeyOverlaidModifierが実行された時に､最初にKeyToKey(Case1)に入るが､その時はリストアはしないように制御するために使用する。
-	// RemapFunc::KeyToKey::static_set_case1_pass_restore(1 or 0)を実行する。
-	// 		case1_pass_restore00 = 1: KeyToKey(Case1)でリストアを実行しないようにする。
-	//							 = 0: KeyToKey(Case1)でリストアを実行するように戻す。
-	//2011.03.02(水)〜03(木)
-    void
-    KeyToKey::static_set_case1_pass_restore(int case1_pass_restore00)
-    {
-	  int ignore_vk_restore = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore);
-		// VK_JIS_TEMPORARY_RESTOREを無視するチェックボックスのオンオフ値
-	  if(!ignore_vk_restore || case1_pass_restore00 != 0 && case1_pass_restore00 != 1) return;
-      case1_pass_restore2_ = case1_pass_restore00;
-    }
-
-//Haci ----------------ここまで全て
-
-
-
     KeyToKey::KeyToKey(void) : index_(0), keyboardRepeatID_(-1), isRepeatEnabled_(true)
     {
       toKeys_ = new Vector_PairKeyFlags();
@@ -220,9 +96,6 @@ namespace org_pqrs_KeyRemap4MacBook {
 	  int ignore_vk_restore = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore);
 		// VK_JIS_TEMPORARY_RESTOREを無視するチェックボックスのオンオフ値
 		//2011.01.26(水)〜02.04(金)
-	  int vk_restore_timeout = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_parameter_keyinterval_timeout);
-	  	// VK_JIS_TEMPORARY_RESTOREを無視してからタイムアウトするまでの時間(msec)
-		//2011.02.04(金) name.xmlは一時的なインストールでは駄目なので､正式にインストールが必要。
 	  int learn_workspacedata = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata);
 		// 2011.03.07(月) 入力モード変更遅延対策の中の「入力モード変更時の誤入力対策」を行うかどうかのチェックボックス。通常はオン。
 	  KeyCode firstKey      = (*toKeys_)[0].key;	// 最初のtoKey
@@ -322,19 +195,19 @@ namespace org_pqrs_KeyRemap4MacBook {
 			  // トグルキーはHandle_VK_JIS_TOGGLE_EISUU_KANA::handle内で処理
 			  // VK_JIS_COMMAND_SPACEも同様｡
 			  if(!learn_workspacedata){
-			  	pass_initialize2_ = INIT_DO;
+			  	VirtualKey::set_pass_initialize(VirtualKey::INIT_DO);
 				// モード変更キーにリマップした場合(モード変更キーを指定するケースは大抵ここに来る)、
 				// 次の文字キーが押された時にCore.cppでこの条件によって、wsd_publicとSavedIMDの初期化が実行されて全てがうまく行く｡
 			  } else {	// 学習モードの時
-			  	CommonData::replace_WSD(firstKey, firstKeyFlags);	//作業用のworkspacedataをすり替える。
-	 		  	pass_initialize2_ = INIT_NOT;		// 次のキー入力時に更新の必要がないので。
+			  	VirtualKey::replace_WSD(firstKey, firstKeyFlags);	//作業用のworkspacedataをすり替える。
+			  	VirtualKey::set_pass_initialize(VirtualKey::INIT_NOT);		// 次のキー入力時に更新の必要がないので。
 			  }
           	} else if(firstKey != KeyCode::VK_JIS_TEMPORARY_KATAKANA &&
 					  firstKey != KeyCode::VK_JIS_TEMPORARY_HIRAGANA &&
 					  firstKey != KeyCode::VK_JIS_TEMPORARY_ROMAN    &&
 					  firstKey != KeyCode::VK_JIS_TEMPORARY_AINU     &&
 					  firstKey != KeyCode::VK_JIS_TEMPORARY_RESTORE  &&
-					  case1_pass_restore2_ == 0 &&
+					  VirtualKey::get_case1_pass_restore() == 0 &&
 					  ignore_vk_restore){
 				// toKeyが1つだけのときに普通はVK_JIS_TEMPORARY系は指定しないので、大抵は､必ずここが実行される。
 				// 例えば､半角スペースにリマップしたキーを押して変換してすぐに(RESTOREタイマーがタイムアウトする前に)、
@@ -343,13 +216,13 @@ namespace org_pqrs_KeyRemap4MacBook {
 				// case1_pass_restore2_は、今のところKeyOverlaidModifierのキーをダウンした場合にリストアしないようにするため。外部からオン/オフ制御を行う。
 				// 2011.02.21(月)、03.02(水)、08(火)
 ///			  EventOutputQueue::FireKey::fire_downup(Flags(0), KeyCode::VK_JIS_TEMPORARY_RESTORE, params.keyboardType);
-			  vk_restore(remapParams.params, 0);		//2011.03.04(金) 汎用化関数を使用して、VK_JIS_TEMPORARY_RESTOREを挿入
+			  VirtualKey::vk_restore(remapParams.params, 0);		//2011.03.04(金) 汎用化関数を使用して、VK_JIS_TEMPORARY_RESTOREを挿入
 			}
 
  			if(ignore_vk_restore || learn_workspacedata){
 				// VK_RESTORE無視のとき、あるいはworkspacedata学習方式の場合は､タイマーを停止する。
-				timer_restore2_.cancelTimeout();
-				pass_initialize2_ = INIT_NOT;		// 次のキー入力時に更新の必要がないので。
+				VirtualKey::static_cancelTimeout();
+				VirtualKey::set_pass_initialize(VirtualKey::INIT_NOT);		// 次のキー入力時に更新の必要がないので。
 			}
 		  }
 
@@ -388,7 +261,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 				// 10.2.16〜3.2,2011.01.17(月)〜3.11(金)
 ///           	EventOutputQueue::FireKey::fire_downup(Flags(0), KeyCode::VK_JIS_TEMPORARY_RESTORE, keyboardType);
 ///           	KeyboardRepeat::primitive_add_downup(  Flags(0), KeyCode::VK_JIS_TEMPORARY_RESTORE, keyboardType);	//これは必要?
- 				vk_restore(remapParams.params, 0);		//2011.03.04(金) 汎用化関数を使用して、VK_JIS_TEMPORARY_RESTOREを挿入
+ 				VirtualKey::vk_restore(remapParams.params, 0);		//2011.03.04(金) 汎用化関数を使用して、VK_JIS_TEMPORARY_RESTOREを挿入
 			}
 
 
@@ -423,13 +296,13 @@ namespace org_pqrs_KeyRemap4MacBook {
 			      // トグルキーはHandle_VK_JIS_TOGGLE_EISUU_KANA::handle側で処理
 			   	  //2011.02.17(木)、03.08(火) 
 				  if(!learn_workspacedata){
-	 				pass_initialize2_ = INIT_DO;		//2011.03.01(火)
+	 				VirtualKey::set_pass_initialize(VirtualKey::INIT_DO);		//2011.03.01(火)
 	 				//ここはtoKeyが2つ以上のケースなので、モード変更キーを指定することはまずないが、念の為。
 	 				//ほとんどの場合は、toKeyが1つだけのCase1で処理される｡
 				  } else { // 学習モードの時
 				  	//2011.03.06(日)
-			  		CommonData::replace_WSD((*toKeys_)[i].key, (*toKeys_)[i].flags);	// 作業用のworkspacedataをすり替える。
-	 		  		pass_initialize2_ = INIT_NOT;		// 次のキー入力時に更新の必要がないので。
+			  		VirtualKey::replace_WSD((*toKeys_)[i].key, (*toKeys_)[i].flags);	// 作業用のworkspacedataをすり替える。
+	 		  		VirtualKey::set_pass_initialize(VirtualKey::INIT_NOT);		// 次のキー入力時に更新の必要がないので。
 	 				//ここはtoKeyが2つ以上のケースなので、モード変更キーを指定することはまずないが、念の為。
 	 				//ほとんどの場合は、toKeyが1つだけのCase1で処理される｡
 	 			  }
@@ -478,16 +351,15 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 
 //Haci
-			if(ignore_vk_restore && lastKey == KeyCode::VK_JIS_TEMPORARY_RESTORE && workLoop_restore2_){
+			if(ignore_vk_restore && lastKey == KeyCode::VK_JIS_TEMPORARY_RESTORE){
 			  //2011.02.06(日)〜03.02(水)、03.11(金)
 			  // VK_JIS_TEMPORARY_RESTOREを無視した場合のみ、RESTORE用として専用タイマーを再起動する｡
 			  // コールバック関数の中の実行を変えるため。
 			  // RESTOREを実行するのは見た目(画面右上の表示)の問題だけで、この処理がなくても次のキー入力時に元に戻るようにしてある。
 				///timer_restore2_.cancelTimeout();	//2011.03.11(金) 念の為、タイマーを停止｡停止しなくても特に問題ないので､とりあえず外す｡
-				callback2_ = CALLBACK_RESTORE;	// コールバック関数での条件(RESTORE実行)を指定
- 				timer_restore2_.setTimeoutMS(vk_restore_timeout);	// 専用タイマーを起動
+				VirtualKey::static_setTimeoutMS(VirtualKey::CALLBACK_RESTORE);
 			} else if(ignore_vk_restore || learn_workspacedata) {	// タイマーを停止する｡
-				timer_restore2_.cancelTimeout();
+				VirtualKey::static_cancelTimeout();
 			}
 
 
@@ -533,65 +405,5 @@ namespace org_pqrs_KeyRemap4MacBook {
       RemapParams rp(params);
       return remap(rp);
     }
-
-
-//Haci
-	//-----------------------------------------------------------------------
-	// キー入力する度に起動する専用タイマーに登録するcallbackルーチン
-	// 別の2つのタイマー用も兼ねる｡タイマー自体は共通｡
-	//	2010.2.24〜3.5, 2011.01.22(土)〜04.09(土)
-      void
-      KeyToKey::timeoutAfterKey2(OSObject* owner, IOTimerEventSource* sender)
-      {
-///	IOLockWrapper::ScopedLock lk(timer_restore2_.getlock());
-/// 2010.3.5、2011.02.13 KeyOverlaidModifier.cppを真似て、remap関数の先頭でも対で実行してみたが、やはり、すぐにロック状態で、Macを再起動。やはり駄目。なくても特に問題は無い｡
-		if(callback2_ == CALLBACK_INIT){
-			// VK_JIS_TEMPORARY系を含まないリマップあるいはリマップなしの場合は､初期化モードにする。
-			// このメカニズムによって､認識できないモード変更キーのようなケースでも､タイムアウト後なら保証できる。
-			// つまり、キーアップから例えば1000ms後まで次のキー入力がなければ､このルーチンが自動的に実行される｡
-			// タイムアウト前に次のキーが押されると(つまり、連打)､Core.cppでこのタイマーは停止するようにしてある。
-			pass_initialize2_ = INIT_DO;	//次のキー入力時に､Core.cppで作業用のworkspaces値などを必ず初期化させるため。
-		} else if(callback2_ == CALLBACK_RESTORE && 
-				  Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_restore_after_timeout)){
-			// VK_JIS_TEMPORARY_RESTOREを無視した時にこのタイマーを起動した場合は、ここでリストアする｡これは見た目の問題｡
-			// ただし、タイムアウト後のリストア実行用のチェックボックスがオンの場合のみ。
-			// 2011.03.08(火)
-			EventOutputQueue::FireKey::fire_downup(Flags(0), KeyCode::VK_JIS_TEMPORARY_RESTORE, CommonData::getcurrent_keyboardType()); //モードを元に戻すだけ｡
-			pass_initialize2_ = INIT_NOT;	// 元に戻るだけなので､次のキー入力時に､Core.cppで作業用のworkspaces値などを初期化させないため。
-		} else if(callback2_ == CALLBACK_SEESAW_INIT){
-			// トグル系の最大の欠点の防止策
-			// VK_JIS_COMMAND_SPACE_SEESAW系のキーで、起点(固定)の入力モードに切り替えた時にこのタイマーが起動される｡
-			// タイムアウト内に押せばトグルし(2度押しと似ている)､タイムアウト後なら起点のモードのままにする。
-			// そのために、ここで、フラグを初期化する｡
-			// 2011.04.09(土)
-			CommonData::init_seesaw();
-		}
-		
-      }
-
-//Haci
-	//------------------------------------------------------------------------------
-	// VK_JIS_TEMPORARY_RESTOREのキーダウン/アップを汎用化
-	// 外部から起動する場合は､keytokey_.vk_restore(remapParams); のように記述する。
-	// 内部から起動する場合は､vk_restore(remapParams); のように記述すればいい。
-	// 外部からは、今のところ、KeyOverlaidModifierで、fromキーを押し続けてそのまま離した時に､モードを戻すために使用している。
-	//	execute_fire00 = 1: fireコマンドも実行する。
-	//				   = 0: キューに入れるだけ。
-	//	2011.03.04(金)
-    bool
-    KeyToKey::vk_restore(const Params_KeyboardEventCallBack& params, int execute_fire00)
-    {
-      if (&params) {
-      	EventOutputQueue::FireKey::fire_downup(Flags(0), KeyCode::VK_JIS_TEMPORARY_RESTORE, params.keyboardType);
-	  	if(execute_fire00){
-       		EventOutputQueue::FireKey::fire(params);
-		}
-		return true;
-      }
-      return false;
-    }
-
-
-
   }
 }

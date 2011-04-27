@@ -41,6 +41,544 @@ namespace org_pqrs_KeyRemap4MacBook {
     return false;
   }
 
+
+//Haci(KeyToKey)
+    TimerWrapperRestore VirtualKey::timer_restore2_;		// 2011.01.31(月)
+    IOWorkLoop*  VirtualKey::workLoop_restore2_ = NULL;	// 2011.02.01(火)
+    int VirtualKey::callback2_ = CALLBACK_INIT;			// 2011.02.27(日)
+    int VirtualKey::pass_initialize2_ = INIT_NOT;			// 2011.03.01(火)インストールした時にその時点でのモードを活かすために最初のキー入力時はパスするため。
+	int VirtualKey::case1_pass_restore2_ = 0;				// 2011.03.02(水)
+
+//Haci
+//KeyRemap4MacBook_bridge::GetWorkspaceData::Reply VirtualKey::wsd_public_;
+//KeyRemap4MacBook_bridge::GetWorkspaceData::Reply VirtualKey::wsd_save_[7];
+  BridgeWorkSpaceData VirtualKey::wsd_public_; 		//2011.01.13(木) 作業用のworkspacedata
+  BridgeWorkSpaceData VirtualKey::wsd_save_[7];		//2011.03.05(土) workspacedataの学習用
+  int VirtualKey::pre_index2_ = -1;					//2011.03.29(火) VK_JIS_COMMAND_SPACE用
+  int VirtualKey::cur_index2_ = -1;					//2011.03.29(火) VK_JIS_COMMAND_SPACE用
+  int VirtualKey::others_index2_ = -1;				//2011.04.05(火) VK_JIS_COMMAND_SPACE用
+  int VirtualKey::sign_plus_minus2_ = -99;			//2011.04.06(水) REPLACE_PLUS_MINUS用の符号
+  int VirtualKey::counter_plus_minus2_ = 0;			//2011.04.06(水) REPLACE_PLUS_MINUS用の連続実行をカウントする。
+  int VirtualKey::pre_counter_plus_minus2_ = 0;		//2011.04.06(水) REPLACE_PLUS_MINUS用のリマップ前の上記カウンター値
+  bool VirtualKey::seesaw_init2_ = false;			//2011.04.09(土) = 1:タイムアウト後にseesawの起点にする。
+
+//Haci(KeyToKey)
+	//=======================================
+	// この関数はCore.cppのstart()関数で使用するためのもの
+	//2011.01.31(月)〜02.10(木)
+    void
+    VirtualKey::static_initialize(IOWorkLoop& workloop)
+    {
+      timer_restore2_.initialize(&workloop, NULL, VirtualKey::timeoutAfterKey2);
+      workLoop_restore2_ = &workloop;
+    }
+
+//Haci(KeyToKey)
+	//=======================================
+	// この関数はCore.cppのstop()関数で使用するためのもの
+	//2011.02.01(火)
+    void
+    VirtualKey::static_terminate(void)
+    {
+      timer_restore2_.terminate();
+    }
+
+//Haci(KeyToKey)
+	//=======================================
+	// 外部からこのタイマーを停止するには、VirtualKey::static_cancelTimeout()を実行する。
+	//2011.02.02(水)〜02.28(月)
+    void
+    VirtualKey::static_cancelTimeout(void)
+    {
+      timer_restore2_.cancelTimeout();	// タイマーを停止
+    }
+
+//Haci(KeyToKey)
+	//=======================================
+	// Core.cppで初期化をパスするかどうかを判断するためのフラグ変数pass_initialize2_の値を得る｡
+	// VirtualKey::static_get_pass_initialize()を実行する。
+	//2011.03.01(火)
+    int
+    VirtualKey::static_get_pass_initialize(void)
+    {
+      return pass_initialize2_;
+    }
+
+
+//Haci(KeyToKey)
+	//=======================================
+	// Core.cppで初期化をパスするかどうかを判断するためのフラグ変数pass_initialize2_の値を変更
+	// VirtualKey::static_set_pass_initialize(VirtualKey::INIT_NOT or INIT_DO)を実行する。
+	//2011.03.01(火)
+    void
+    VirtualKey::static_set_pass_initialize(int pass_initialize00)
+    {
+	  if(pass_initialize00 != INIT_NOT && pass_initialize00 != INIT_DO) return;
+      pass_initialize2_ = pass_initialize00;
+    }
+
+//Haci(KeyToKey)
+	//=======================================
+	// タイムアウト後のコールバック関数内での実行の種類を指定して､タイマーを起動する。
+	// 実行するには、VirtualKey::static_setTimeoutMS()を実行する。
+	//2011.04.09,27 統合
+    void
+    VirtualKey::static_setTimeoutMS(int callback00)
+    {
+	  int vk_restore_timeout = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_parameter_keyinterval_timeout);
+	  			// キー入力からタイムアウトするまでの時間(msec)
+		if(workLoop_restore2_){
+			callback2_  = callback00;	// コールバック関数内での実行の種類を指定
+			timer_restore2_.setTimeoutMS(vk_restore_timeout);
+		}
+    }
+
+//Haci(KeyToKey)
+	//=======================================
+	// KeyToKey(Case1)でリストアを実行するか、しないかを決める。
+	// 今のところKeyOverlaidModifierが実行された時に､最初にKeyToKey(Case1)に入るが､その時はリストアはしないように制御するために使用する。
+	// VirtualKey::static_set_case1_pass_restore(1 or 0)を実行する。
+	// 		case1_pass_restore00 = 1: KeyToKey(Case1)でリストアを実行しないようにする。
+	//							 = 0: KeyToKey(Case1)でリストアを実行するように戻す。
+	//2011.03.02(水)〜03(木)
+    void
+    VirtualKey::static_set_case1_pass_restore(int case1_pass_restore00)
+    {
+	  int ignore_vk_restore = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore);
+		// VK_JIS_TEMPORARY_RESTOREを無視するチェックボックスのオンオフ値
+	  if(!ignore_vk_restore || case1_pass_restore00 != 0 && case1_pass_restore00 != 1) return;
+      case1_pass_restore2_ = case1_pass_restore00;
+    }
+
+
+//Haci(KeyToKey)
+	//-----------------------------------------------------------------------
+	// キー入力する度に起動する専用タイマーに登録するcallbackルーチン
+	// 別の2つのタイマー用も兼ねる｡タイマー自体は共通｡
+	//	2010.2.24〜3.5, 2011.01.22(土)〜04.09(土)
+      void
+      VirtualKey::timeoutAfterKey2(OSObject* owner, IOTimerEventSource* sender)
+      {
+///	IOLockWrapper::ScopedLock lk(timer_restore2_.getlock());
+/// 2010.3.5、2011.02.13 KeyOverlaidModifier.cppを真似て、remap関数の先頭でも対で実行してみたが、やはり、すぐにロック状態で、Macを再起動。やはり駄目。なくても特に問題は無い｡
+		if(callback2_ == CALLBACK_INIT){
+			// VK_JIS_TEMPORARY系を含まないリマップあるいはリマップなしの場合は､初期化モードにする。
+			// このメカニズムによって､認識できないモード変更キーのようなケースでも､タイムアウト後なら保証できる。
+			// つまり、キーアップから例えば1000ms後まで次のキー入力がなければ､このルーチンが自動的に実行される｡
+			// タイムアウト前に次のキーが押されると(つまり、連打)､Core.cppでこのタイマーは停止するようにしてある。
+			pass_initialize2_ = INIT_DO;	//次のキー入力時に､Core.cppで作業用のworkspaces値などを必ず初期化させるため。
+		} else if(callback2_ == CALLBACK_RESTORE && 
+				  Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_restore_after_timeout)){
+			// VK_JIS_TEMPORARY_RESTOREを無視した時にこのタイマーを起動した場合は、ここでリストアする｡これは見た目の問題｡
+			// ただし、タイムアウト後のリストア実行用のチェックボックスがオンの場合のみ。
+			// 2011.03.08(火)
+			EventOutputQueue::FireKey::fire_downup(Flags(0), KeyCode::VK_JIS_TEMPORARY_RESTORE, CommonData::getcurrent_keyboardType()); //モードを元に戻すだけ｡
+			pass_initialize2_ = INIT_NOT;	// 元に戻るだけなので､次のキー入力時に､Core.cppで作業用のworkspaces値などを初期化させないため。
+		} else if(callback2_ == CALLBACK_SEESAW_INIT){
+			// トグル系の最大の欠点の防止策
+			// VK_JIS_COMMAND_SPACE_SEESAW系のキーで、起点(固定)の入力モードに切り替えた時にこのタイマーが起動される｡
+			// タイムアウト内に押せばトグルし(2度押しと似ている)､タイムアウト後なら起点のモードのままにする。
+			// そのために、ここで、フラグを初期化する｡
+			// 2011.04.09(土)
+			VirtualKey::init_seesaw();
+		}
+		
+      }
+
+//Haci(KeyToKey)
+	//------------------------------------------------------------------------------
+	// VK_JIS_TEMPORARY_RESTOREのキーダウン/アップを汎用化
+	// 外部から起動する場合は､keytokey_.vk_restore(remapParams); のように記述する。
+	// 内部から起動する場合は､vk_restore(remapParams); のように記述すればいい。
+	// 外部からは、今のところ、KeyOverlaidModifierで、fromキーを押し続けてそのまま離した時に､モードを戻すために使用している。
+	//	execute_fire00 = 1: fireコマンドも実行する。
+	//				   = 0: キューに入れるだけ。
+	//	2011.03.04(金)
+    bool
+    VirtualKey::vk_restore(const Params_KeyboardEventCallBack& params, int execute_fire00)
+    {
+      if (&params) {
+      	EventOutputQueue::FireKey::fire_downup(Flags(0), KeyCode::VK_JIS_TEMPORARY_RESTORE, params.keyboardType);
+	  	if(execute_fire00){
+       		EventOutputQueue::FireKey::fire(params);
+		}
+		return true;
+      }
+      return false;
+    }
+
+//Haci(KeyToKey) ----------------ここまで全て
+
+
+//Haci
+//------------------------------------------------------------
+// (全体の概略)
+// 入力モード切替え遅延(MacOSのバグ)は、連打やリピートの遅延が起きることが先ずは問題ですが､
+// それ以上に､誤入力が起きることが致命的です。
+//
+// 入力モード切替え遅延(MacOSのバグ)対策は、大きく2つのファイルに分かれる。
+//	  (A) リマップしたものはKeyToKey.cppで処理(VK_JIS_TEMPORARY系を含むケースと含まないケース)
+//	  (B) リマップしないものはCore.cppで処理
+//	 Core.cppでは､作業用のworkspacedataを更新するかしないかの制御やworkspacedata値の学習などを行う。
+//	 InputModeFilter.cpp(フィルター)とVirtualKey.cppで作業用のworkspacedataを使用する。
+//	 キーアップからのタイムアウトを見るための専用タイマーおよびコールバック関数は､3つの用途、
+//		・作業用のworkspacedataの初期化(次のキー入力時に) ...これが基本で、モード変更キーが押された場合に(押されたかどうかはチェックするまでもなく)、
+//														切替遅延があっても､タイムアウト後には正しくなっているはずという前提｡
+//	 	・入力モードのリストア							  ...VK_JIS_TEMPORARY_RESTOREを無視した場合
+//		・VK_COMMAND_SPACE_SEESAW系で起点(固定)となっているモードに切り替えた後の切替ロック
+//	 に共用できる仕組みにしてある。3つはお互いに独立しているので､かぶることはない。
+
+//Haci
+//======================================
+// 主に､連打遅延対策の一部を制御する。本関数の処理を簡単にまとめると､
+//		(C0) workspacedataの学習
+//		(C1) タイマーをまずは停止する。連打したときのため。
+//		(C2) 作業用のworkspacedataなどを更新・初期化
+//			(条件C2-1) モード変更キーあるいは機能キーだが､リマップなし。
+//			(条件C2-2) 通常のキーだが、リマップ無/有共通で､初期化指定があったとき。
+//					  キー入力からのタイムアウト後なら動作が保証される。
+//		(C3) 通常キーでリマップなしの場合は、
+//			(C3-1) リストアする(キーダウン時)。
+//			(C3-2) タイマーを起動(キーアップ時)。
+
+//		stage00 = POST_REMAP:       リマップ前。KeyToKeyでリマップするキー、全くリマップ指定のないキーの共通処理をする。
+//									  ・タイマーを停止。
+//				= JUST_AFTER_REMAP: リマップ直後
+//									  ・VK_COMMAND_SPACE_REPLACE_PLUS_MINUS系の符号を逆転。
+//				= NON_REMAPPED:     全くリマップ指定のないキーの処理をする。
+//									  ・タイマーを起動。
+//	2010.2.14〜3.5
+//	2011.01.16(日)〜04.16(土) ver7.0.37〜7.2.30で、新方式をインプリメント｡
+//	2011.04.27(水) Core.cppからここに移動。
+      void
+      VirtualKey::ControlWorkspaceData(Params_KeyboardEventCallBack& params, int stage00)
+      {
+	  bool isKeyDown = params.ex_iskeydown;	//10.2.15、2011.01.16(日)
+	  bool keyisCCOS;		//10.2.18 =1: キーとしてCCOSが押されている。
+	  bool isonCCO;			//10.2.15 =1: モディファイアーとしてCCO(Command,Control,Option)のどれかが押されている。
+	  bool isonS;			//10.2.16 =1: モディファイアーとしてS(Shift)が押されている。
+	  bool is_eisuu_kana_kanashift;	//10.2.15 モード変更のための英数キー、かなキーが押されている。
+	  bool isonCCOSonly;	//10.2.16 =1: モディファイアーとしてCCOS(Command,Control,Option,Shift)のみが押されていて、文字キーは押されていない。
+	  int pass_initialize00;	//2011.03.01(火)
+	  int ignore_vk_restore = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore);	
+	  			//2011.02.05(土) checkbox.xmlの「General --- Ignore VK_JIS_TEMPORARY_RESTORE」の設定値
+	  int learn_workspacedata = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata);
+				// 2011.03.07(月) 「モード変更キー押下時の遅延対策」を行うかどうかのチェックボックス。効果を確かめるために分けてあるが､通常はオン。
+///	  int restore_after_timeout = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_restore_after_timeout);
+				// 2011.03.08(火) 「タイムアウト後のリストア」を行うかどうかのチェックボックス。
+	  bool result00;	//2011.04.16(土)
+
+	  if(!ignore_vk_restore && !learn_workspacedata) return;	//2011.02.05(土)、03.08(火)
+			// restore_after_timeoutだけがオンの場合は無意味｡
+
+	  keyisCCOS = params.key == KeyCode::COMMAND_L || params.key == KeyCode::COMMAND_R ||
+	  			  params.key == KeyCode::CONTROL_L || params.key == KeyCode::CONTROL_R ||
+	  			  params.key == KeyCode::OPTION_L  || params.key == KeyCode::OPTION_R  ||
+	  			  params.key == KeyCode::SHIFT_L   || params.key == KeyCode::SHIFT_R;		//10.2.18
+
+	  isonCCO = FlagStatus::makeFlags().isOn(ModifierFlag::COMMAND_L) || params.flags == ModifierFlag::COMMAND_L ||
+	  		    FlagStatus::makeFlags().isOn(ModifierFlag::COMMAND_R) || params.flags == ModifierFlag::COMMAND_R ||
+	  		    FlagStatus::makeFlags().isOn(ModifierFlag::CONTROL_L) || params.flags == ModifierFlag::CONTROL_L ||
+	  		    FlagStatus::makeFlags().isOn(ModifierFlag::CONTROL_R) || params.flags == ModifierFlag::CONTROL_R ||
+  	  		    FlagStatus::makeFlags().isOn(ModifierFlag::OPTION_L)  || params.flags == ModifierFlag::OPTION_L  ||
+	  		    FlagStatus::makeFlags().isOn(ModifierFlag::OPTION_R)  || params.flags == ModifierFlag::OPTION_R;
+
+	  isonS = FlagStatus::makeFlags().isOn(ModifierFlag::SHIFT_L) || params.flags == ModifierFlag::SHIFT_L ||
+        	  FlagStatus::makeFlags().isOn(ModifierFlag::SHIFT_R) || params.flags == ModifierFlag::SHIFT_R;
+        						  //10.2.16
+	  is_eisuu_kana_kanashift =  params.key == KeyCode::JIS_EISUU && !isonCCO && !isonS ||
+	  							 params.key == KeyCode::JIS_EISUU && !isonS ||
+	  							 params.key == KeyCode::JIS_KANA  && !isonCCO && !isonS ||
+            					 params.key == KeyCode::JIS_KANA  && isonS;
+        						//10.2.15 英数キー
+
+	  isonCCOSonly = (isonS || isonCCO) && !keyisCCOS;		// 10.2.16 モードキーがCCOSのとき
+	  														// 10.2.18 モード変更直後にシフトケースのキーを押すと誤入力にならないようにするため、
+	  														//		   文字キーがCCOSでないときという条件を追加。
+	  														// VK_JIS_TEMPORARY系でモード変更して戻していなければNONE以外の値になっている。
+
+	  int isPPP = (is_eisuu_kana_kanashift || isonCCOSonly);	//2011.02.13(日) モード変更キーあるいは機能キー
+	  KeyCode key00  = params.key;
+	  Flags   flag00 = params.flags;
+
+	  // VK_COMMAND_SPACE_REPLACE_PLUS_MINUS系の符号を逆転する。
+	  //	2011.04.06(水)
+	  if(isKeyDown){	//キーダウン時
+		if(stage00 == POST_REMAP){	//リマップ前
+			VirtualKey::reverse_sign_REPLACE_PLUS_MINUS(0);	// VK_COMMAND_SPACEのリプレース用のカウンター値を記憶。
+		} else if(stage00 == JUST_AFTER_REMAP){	// リマップ直後
+			// VK_COMMAND_SPACE_REPLACE_PLUS_MINUS系の仮想キーが連続していなければ、符号を逆転｡
+			// 例えば､Shift+かなに割り当てている場合は､Shiftキーをキーアップした時も含む｡
+			// カウンターが進んでいなければ、VK_COMMAND_SPACE_REPLACE_PLUS_MINUS系が実行されなかったと判断する｡
+			VirtualKey::reverse_sign_REPLACE_PLUS_MINUS(1);
+			return;
+		}
+	  }
+
+// キーアップ時 -----------------
+	  if (!isKeyDown) {
+		if(!isPPP && !isonCCO && stage00 == POST_REMAP){
+			//(C3-2) キーアップしたとき、初期化指定としてタイマーを起動
+			//2011.02.28(月)
+			//2011.03.11(金) 常にタイマーを起動｡VK_RESTOREを含んだ場合は､KeyToKey側で起動し直される。
+			//2011.04.15(金) Command+Spaceのように、最後にCommandキーをアップしたような場合も除くため、!isonCCOを追加｡
+			static_setTimeoutMS(CALLBACK_INIT);	//初期化指定のタイマーを起動｡
+		}
+
+		return;	//キーアップ時は、これ以外は何もしない｡
+	  }
+
+// 以下はすべてキーダウン時 -----------------------------
+	  //(C1) RESTORE用のタイマーをまずは停止する。
+	  // 	 タイマーが起動していなければ、何も実行されないだけ｡
+	  if(stage00 == POST_REMAP){
+	  	// RESTOREタイマーを停止
+		  VirtualKey::static_cancelTimeout();	//10.2.28
+	  }
+
+	  if(stage00 == POST_REMAP && learn_workspacedata){
+		//(C0) 英字・ひらがな・カタカナ・アイヌのworkspacedataをそれぞれ学習(保存)する。
+	  	// 2011.03.05(土)、07(月)、10(木)
+		VirtualKey::learn_WSD();
+	  }
+
+	  pass_initialize00 = VirtualKey::static_get_pass_initialize();
+	  		//2011.03.01(火) 初期化をパスするかどうかを判断するためのフラグ変数pass_initialize2_の値を得る
+			//2011.03.14(月) learn_WSDの中でこの値を変更するようにして、最初から正しくするようにしたので､ここに移動。
+
+	  // 作業用workspacedataの更新条件
+	  bool conC2_1 = isPPP  && stage00 == NON_REMAPPED;
+	  		//(条件C2-1) モード変更キーあるいは機能キーだが､リマップなし。
+	  bool conC2_2 = !isPPP && stage00 == POST_REMAP && pass_initialize00 == VirtualKey::INIT_DO;		//2011.03.01(火)
+	  		//(条件C2-2) 通常のキーだが、リマップ無/有共通で､初期化指定があるとき。
+	  		//		 キー入力からのタイムアウト後なら、動作が保証される。
+	  bool conC3   = !isPPP && stage00 == NON_REMAPPED;
+	  		//(条件C3)   通常キーで、リマップ無し
+
+	  if(!learn_workspacedata){ // 学習のチェックボックスがオフの場合
+	    if (conC2_1 || conC2_2){
+			//(C2) 作業用のWSD(workspacedata)とSavedIMDの初期化
+			//	2011.02.18(金)〜10(木)
+			VirtualKey::update_WSD();	// 作業用のworkspacedataを更新
+			VirtualKey::static_set_pass_initialize(conC2_1 ? VirtualKey::INIT_DO : VirtualKey::INIT_NOT);
+						//条件1(conC2_1)なら次のキー入力時に､初期化する指定、条件2(conC2_2)なら初期化しない指定を設定する。
+			Handle_VK_JIS_TEMPORARY::resetSavedIMD();	//2011.02.18(金) VK_JIS_TEMPORARY系の保存値を初期化。
+	    }
+	  } else { // 学習がオンの場合
+	    if (conC2_1){ // リマップ無しの素のモード変更キー
+			//(C2) 作業用のWSD(workspacedata)とSavedIMDの初期化
+			//	2011.03.05(土)
+			result00 = VirtualKey::replace_WSD(key00, flag00);		// 作業用のWSDをすり替える｡
+			if(result00){
+			  VirtualKey::static_set_pass_initialize(VirtualKey::INIT_NOT);	// 次のキー入力時には初期化しないようにする。
+			  Handle_VK_JIS_TEMPORARY::resetSavedIMD();	//2011.02.18(金) VK_JIS_TEMPORARY系の保存値を初期化。
+			} else {//workspacedataの学習をしない設定の場合あるいは未学習の場合は､作業用のworkspacedataを更新する必要がある｡
+			  //2011.04.16(土)am11:13
+			  VirtualKey::static_set_pass_initialize(VirtualKey::INIT_DO);	// 次のキー入力時には初期化する。
+			}
+	    }else if (conC2_2){
+			//(C2) 作業用のWSD(workspacedata)の更新とSavedIMDの初期化
+			//	2011.02.18(金)〜03.10(木)
+			VirtualKey::update_WSD();	// WSDの更新
+			VirtualKey::static_set_pass_initialize(VirtualKey::INIT_NOT);	// 次のキー入力時は初期化しないようにする。
+			Handle_VK_JIS_TEMPORARY::resetSavedIMD();	// VK_JIS_TEMPORARY系の保存値を初期化。
+	    }
+	  }
+	  if(conC3){
+			//(C3-1) リマップなしの場合で、モード変更キーや機能キーでなければモードを戻す。
+			// 戻すべき値があるかどうかは調べない｡連打の時はそういう条件が追いつかないので逆効果になるから。
+			// 例えば､リマップしていないキーボードでCommand_Lをキーダウンしただけで､ここに入って、モードが戻る。
+			// 2011.03.01(火)
+			EventOutputQueue::FireKey::fire_downup(Flags(0), KeyCode::VK_JIS_TEMPORARY_RESTORE, params.keyboardType);
+			VirtualKey::static_set_pass_initialize(VirtualKey::INIT_NOT);
+				//  元のモードに戻すだけなので､次のキー入力時に作業用workspacesなどをそのまま使用すればいいので、初期化をしない指定とする。
+	  }
+		return;
+      }	//ControlWorkspaceDataの終わり
+
+
+//Haci
+  //--------------------------------------------------------
+  // Core.cppでリマップ前後に実行して、
+  // REPLACE_PLUS_MINUS_SKIP系が実行した時のカウンターがカウントアップしていれば何もせず､
+  // カウントアップしていなければ､符号を逆転する。
+  // when00 = 0: リマップ前
+  //		= 1: リマップ直後(リマップしなかった場合も含む)
+  //		= 9: REPLACE_PLUS_MINUS_SIP系のキーダウン時
+  // 2011.04.06(水)
+  void
+  VirtualKey::reverse_sign_REPLACE_PLUS_MINUS(int when00)
+  {
+    if(when00 == 0){			// リマップ前
+		pre_counter_plus_minus2_ = counter_plus_minus2_; //リマップ前の値を保存
+    } else if(when00 == 1) {	// リマップ直後
+      if (counter_plus_minus2_ == pre_counter_plus_minus2_ && counter_plus_minus2_ > 0){
+		// counter_plus_minus2_が1以上の場合
+		// リマップ後に､カウンターが進んでないので､REPLACE_PLUS_MINUSは実行されずに､他のキーが押されたことを意味するので、
+		// カウンターを初期化し､符号を逆転する。
+		pre_counter_plus_minus2_ = 0;
+		counter_plus_minus2_ = 0;
+		if(sign_plus_minus2_ == -99){
+		  sign_plus_minus2_ = 1;		// 最初は正方向
+		}
+		sign_plus_minus2_ = - sign_plus_minus2_;
+	  } else {
+      }
+    } else { // REPLACE_PLUS_MINUSのキーダウン時
+      ++counter_plus_minus2_;
+    }
+  }
+
+//Haci
+//====================================================================================================
+// 入力モード詳細値、あるいは、モード変更用のキーコードからそれに対応するwsd_save_配列のインデックス値(1〜)を得る。
+//	実際には､以下の2つの関数から呼ばれるマスター関数｡
+//		IMD2index(InputModeDetail imd00)
+//		modeKey2index(KeyCode modekey00, Flags flag00)
+//	2011.03.19(土)、26(土)、31(木)
+  int
+  VirtualKey::get_WSDindex(InputModeDetail imd00, KeyCode modekey00, Flags flag00){
+	//(共通処理) 入力モード値を格納する多次元配列変数のインデックス値を得る 2011.03.15(火)
+	int index00;
+	bool CtlSft = (flag00 == (ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_L) ||
+				   flag00 == (ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_R) ||
+				   flag00 == (ModifierFlag::CONTROL_R | ModifierFlag::SHIFT_L) ||
+				   flag00 == (ModifierFlag::CONTROL_R | ModifierFlag::SHIFT_R) );
+
+	if(imd00 == InputModeDetail::UNKNOWN){
+	  //2011.03.26(土)
+      if (modekey00 == KeyCode::JIS_EISUU && !(flag00 == ModifierFlag::SHIFT_L || flag00 == ModifierFlag::SHIFT_R) ||
+      	  modekey00 == KeyCode::JIS_COLON && CtlSft){	//英字モード
+      			 // 2011.04.12 [ctl]+[sft]+[:]
+		imd00 = InputModeDetail::ROMAN;
+      } else if (modekey00 == KeyCode::JIS_KANA  && !(flag00 == ModifierFlag::SHIFT_L || flag00 == ModifierFlag::SHIFT_R) ||
+      			 modekey00 == KeyCode::J && CtlSft){	//ひらがなモード
+      			 // 2011.04.12 [ctl]+[sft]+[J]
+		imd00 = InputModeDetail::JAPANESE;
+      } else if (modekey00 == KeyCode::JIS_KANA  && (flag00 == ModifierFlag::SHIFT_L || flag00 == ModifierFlag::SHIFT_R) ||
+      			 modekey00 == KeyCode::K && CtlSft){	// カタカナモード
+		imd00 = InputModeDetail::JAPANESE_KATAKANA;
+      } else if (       modekey00 == KeyCode::JIS_EISUU && (flag00 == ModifierFlag::SHIFT_L || flag00 == ModifierFlag::SHIFT_R) ||
+      			 modekey00 == KeyCode::SEMICOLON && CtlSft){	//半角カタカナモード
+      			 // 2011.03.31(木) [ctl]+[sft]+[;]
+		imd00 = InputModeDetail::JAPANESE_HALFWIDTH_KANA;
+      } else if (modekey00 == KeyCode::JIS_KANA  && (flag00 == ModifierFlag::OPTION_L || flag00 == ModifierFlag::OPTION_R) ||
+      			 modekey00 == KeyCode::JIS_BRACKET_RIGHT && CtlSft){	//AINUモード
+      			 // 2011.04.12 AINU: [ctl]+[sft]+]
+		imd00 = InputModeDetail::AINU;
+      } else if (modekey00 == KeyCode::L && CtlSft){	//全角英数モード
+      			 // 2011.04.01(金) [ctl]+[sft]+[L]
+		imd00 = InputModeDetail::JAPANESE_FULLWIDTH_ROMAN;
+	  } else {
+	  	return -1;
+	  }
+	}
+
+	if(        imd00 == InputModeDetail::ROMAN){
+		index00 = wsdEISU;
+	} else if (imd00 == InputModeDetail::JAPANESE_HIRAGANA || imd00 == InputModeDetail::JAPANESE){
+		index00 = wsdHIRA;
+	} else if (imd00 == InputModeDetail::JAPANESE_KATAKANA){
+		index00 = wsdKATA;
+	} else if (imd00 == InputModeDetail::JAPANESE_HALFWIDTH_KANA){	//2011.03.31(木)
+		index00 = wsdHKAT;
+	} else if (imd00 == InputModeDetail::AINU){
+		index00 = wsdAINU;
+	} else if (imd00 == InputModeDetail::JAPANESE_FULLWIDTH_ROMAN){	//2011.04.01(金)
+		index00 = wsdFEIS;
+	} else {
+		return -1;
+	}
+	return index00;
+  }
+
+// Haci
+//====================================================================
+// 作業用のworkspacedataの更新、学習、すり替え、元に戻すためのマスター関数
+// 実際には､以下の4つの関数から呼び出される｡
+//		learn_WSD(void)
+//		update_WSD(void)
+//		replace_WSD(KeyCode modekey00, Flags flag00)
+//		restore_WSD(InputModeDetail IMDsaved00)
+// (目的1) VK_RESTOREを含むキーの連打・リピートでの遅延対策
+// 		  最初のキーが押された時の状態を保存するということ。この値をフィルターでも用いる｡
+// 		  だから、VK_RESTOREを一旦無視しても、次のキーは同じフィルターを確実に通ることが保証される。
+// (目的2) モード変更キーを押した時､あるいは、toKeyが日本語入力モード変更キーの時､それと同時に次の文字キーを打つと､遅延のせいで誤入力が起きるので､それも防止する｡
+//		  これにより、遅延バグによる誤入力は完全に排除できる。ほとんど同時に押しても大丈夫。
+//		  ただし、オリジナルのCommand+Spaceのように動作が特定できないものは救えないが、VK_COMMAND_SPACE系ではこの仕組みを利用して完璧｡
+//	mode00 = 0(目的1、2共通):作業用のworkspacedataの更新のみ(学習方式でない場合も)
+//		   以下は学習方式の場合のみ。
+//		   = 1(目的2):       最新の正しいworkspacedata値を日本語入力詳細モード毎に個別に学習(保存)する。
+//		   = 2(目的2):       指定した入力モード変更キーに対応するWSD似すり替える。ただし、workspacedataが学習(保存)済なら｡
+//		   = 3(目的1):       指定した入力モード値に対応するWSDにすり替える。
+//	modekey00, flag00:      モード変更キーを与える。
+//	IMD00            :      入力モード自体を指定する。主に､handle_RESTOREで使用｡
+//	戻り値 = false   :       未学習のためすり替えなかった｡呼び出し側では、INIT_DOを実行することで､次の文字キー入力時の誤入力を防止すること。
+// 2011.01.13〜18、03.05〜15、04.16,27
+  bool
+  VirtualKey::control_WSD(int mode00, KeyCode modekey00, Flags flag00, InputModeDetail IMD00)
+  {
+    int learn_workspacedata = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata);
+				// 入力モード変更遅延対策の中の「モード変更時の誤入力対策」を行うかどうかのチェックボックス。通常はオン。
+	InputModeDetail IMDsv;
+	int index00 = 1;	// 多次元配列のインデックス値
+	BridgeWorkSpaceData curWSD00 = CommonData::getcurrent_workspacedata();	//2011.04.27
+
+	if(mode00 == 0){	// 更新のみ
+      wsd_public_ = curWSD00;
+
+	  index00 = IMD2index(wsd_public_.inputmodedetail);	// 現在値 2011.03.29(火)
+	  set_new_index(index00);	// シーソー用:2011.03.29(火)
+	  return true;
+	}
+
+	if(!(learn_workspacedata  && (mode00 == 1 || mode00 == 2 || mode00 == 3))) return false;
+
+	// 入力モード値を得る
+	if(mode00 == 1){	// 学習
+		index00 = IMD2index(curWSD00.inputmodedetail);	//現在値 2011.03.29(火)
+	} else if(mode00 == 2){	// キーコード・フラグ値を使ってすり替え
+	  // キーコード・フラグ値を入力モード値に変換 2011.03.15(火)
+		index00 = modeKey2index(modekey00, flag00);		//2011.03.29(火)
+	} else { // mode00 = 3
+		index00 = IMD2index(IMD00);		//2011.03.29(火) これを入れ忘れて変換キーを押したら2度もフリーズ。
+	}
+	if(index00 < 0) return false;
+
+	if(mode00 == 1){	// 最新の正しい値を学習(保存)する。
+	  IMDsv = wsd_save_[wsdSET].inputmodedetail;	// 1つでも保存済かを示すフラグ
+	  if(IMDsv == 0 ) {	//保存済でなければ
+		//if(pre_index2_ == -1)	でもいい。2011.03.29(火)
+	    // 最初のキー入力と同時に､Core.cppで初期化が実行できるようにするため。
+	  	wsd_save_[wsdSET] = curWSD00;	// 現在値を保存(この値に意味は無い)。これによりこれ以降はここには入らない。
+	  	VirtualKey::static_set_pass_initialize(VirtualKey::INIT_DO);	// すぐに初期化するため。
+		set_indexes_directly(-1, index00, -1);	//2011.04.11(月)
+	  }
+	  wsd_save_[index00] = curWSD00;	//学習
+	  return true;		//2011.04.16(土)
+
+	} else if((mode00 == 2 || mode00 == 3 ) && learn_workspacedata){
+	  // 入力モード値に従って､そのモードのworkspacedataが学習済であれば、それを利用して、すり替える｡
+	  IMDsv = wsd_save_[index00].inputmodedetail;
+	  if(IMDsv != 0){
+	  	wsd_public_ = wsd_save_[index00];	 // 保存されていればそれを利用する。
+		if(mode00 == 2){ //モード変更キーの場合のみ
+			// 2011.03.29(火)
+			set_new_index(index00);	// シーソー用:2011.03.29(火)
+		}
+	  } else {	//2011.04.16(土)
+	  	return false;		//この戻り値は意味がある｡
+	  }
+	} else {
+	  return false;		//2011.04.16(土)
+	}
+	return true;		//2011.04.16(土)
+  }
+
+// Haci 追加関数終わり========================================================================
+
+
+
   // ----------------------------------------------------------------------
   bool
   Handle_VK_LOCK::handle(const Params_KeyboardEventCallBack& params)
@@ -525,7 +1063,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 
     if (params.ex_iskeydown) {
       if (!(ignore_vk_restore || learn_workspacedata) && InputMode::JAPANESE == CommonData::getcurrent_workspacedata().inputmode ||
-      	   (ignore_vk_restore || learn_workspacedata) && InputMode::JAPANESE == CommonData::getwsd_public().inputmode) {
+      	   (ignore_vk_restore || learn_workspacedata) && InputMode::JAPANESE == VirtualKey::getwsd_public().inputmode) {
 		// チェックボックスの設定のいずれかがオンなら作業用のworkspacedataを使用。
 
 
@@ -539,12 +1077,12 @@ namespace org_pqrs_KeyRemap4MacBook {
 //Haci
 	  bool result00 = false;	//2011.04.16(土)
 	  if(learn_workspacedata){	// 学習機能の設定がチェックされていれば､作業用のworkspacedataをすり替える｡
-		result00 = CommonData::replace_WSD(newkeycode_, ModifierFlag::NONE);
+		result00 = VirtualKey::replace_WSD(newkeycode_, ModifierFlag::NONE);
 	  }
 	  if(result00){	//学習済ですり替えられたので､次のキー入力時にCore.cppでの更新をしないようにする。
-		RemapFunc::KeyToKey::static_set_pass_initialize(RemapFunc::KeyToKey::INIT_NOT);
+		VirtualKey::static_set_pass_initialize(VirtualKey::INIT_NOT);
 	  } else {	//workspacedataの学習をしない設定の場合を含めて、未学習の場合も､次のキーの時に、作業用のworkspacedataを更新する必要がある｡
- 	  	RemapFunc::KeyToKey::static_set_pass_initialize(RemapFunc::KeyToKey::INIT_DO);
+ 	  	VirtualKey::static_set_pass_initialize(VirtualKey::INIT_DO);
 	  }
 
 
@@ -585,7 +1123,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 				// 「モード変更時の誤入力対策」を行うかどうかのチェックボックス。
 	KeyCode key00  = params.key;
     int index00;
-    int skip00[CommonData::wsdMAX +1] = {0};	//2011.04.05(火)
+    int skip00[VirtualKey::wsdMAX +1] = {0};	//2011.04.05(火)
     int replace_num00;							//2011.04.05(火)
 	int seesawType00 = -1;
 	int skipType00   = -1;		//2011.04.15(金)
@@ -610,58 +1148,58 @@ namespace org_pqrs_KeyRemap4MacBook {
 	if(params.ex_iskeydown){	//キーダウン時の処理(始まり)----------------------
 		//2011.04.09(土)pm03:19 キーアップは最後の部分のみ｡
 	  if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_CUR_PRE){ // シーソー切替
-		seesawType00 = CommonData::CUR_PRE;
+		seesawType00 = VirtualKey::CUR_PRE;
 	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_EISUU_KANA){
-		seesawType00 = CommonData::EISUU_KANA;
+		seesawType00 = VirtualKey::EISUU_KANA;
 	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_KANA_OTHERS){
-		seesawType00 = CommonData::KANA_OTHERS;
+		seesawType00 = VirtualKey::KANA_OTHERS;
 	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_KANA_EISUU){		//2011.04.15(金)
-		seesawType00 = CommonData::KANA_EISUU;
+		seesawType00 = VirtualKey::KANA_EISUU;
 	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_EISUU_OTHERS){	//2011.04.15(金)
-		seesawType00 = CommonData::EISUU_OTHERS;
+		seesawType00 = VirtualKey::EISUU_OTHERS;
 	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_SKIP_NONE){ // リプレース
-		skipType00 = CommonData::SKIP_NONE_PLUS;
+		skipType00 = VirtualKey::SKIP_NONE_PLUS;
 	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_SKIP_PRE){
-		skipType00 = CommonData::SKIP_PRE_PLUS;
+		skipType00 = VirtualKey::SKIP_PRE_PLUS;
 	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_MINUS_SKIP_NONE){
-		skipType00 = CommonData::SKIP_NONE_MINUS;
+		skipType00 = VirtualKey::SKIP_NONE_MINUS;
 	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_MINUS_SKIP_PRE){
-		skipType00 = CommonData::SKIP_PRE_MINUS;
+		skipType00 = VirtualKey::SKIP_PRE_MINUS;
 	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_MINUS_SKIP_KANA_EISUU){
-		skipType00 = CommonData::SKIP_EISUU_KANA;
+		skipType00 = VirtualKey::SKIP_EISUU_KANA;
 	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_MINUS_SKIP_KANA){	//2011.04.15(金)
-		skipType00 = CommonData::SKIP_KANA;
+		skipType00 = VirtualKey::SKIP_KANA;
 	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_MINUS_SKIP_EISUU){	//2011.04.15(金)
-		skipType00 = CommonData::SKIP_EISUU;
+		skipType00 = VirtualKey::SKIP_EISUU;
 	  }
 
 	  newflag_ = ModifierFlag::NONE;	//2011.04.01(金)
 	  if(seesawType00 != -1){	// seesawの場合
-		index00 = CommonData::get_index_for_seesaw_AtoB_WSD(seesawType00);	// 2011.04.10(日)統合
+		index00 = VirtualKey::get_index_for_seesaw_AtoB_WSD(seesawType00);	// 2011.04.10(日)統合
 
-		if (seesawType00 == CommonData::EISUU_KANA   && index00 == CommonData::wsdEISU ||
-			seesawType00 == CommonData::KANA_OTHERS  && index00 == CommonData::wsdHIRA ||
-			seesawType00 == CommonData::KANA_EISUU   && index00 == CommonData::wsdHIRA ||
-			seesawType00 == CommonData::EISUU_OTHERS && index00 == CommonData::wsdEISU){
+		if (seesawType00 == VirtualKey::EISUU_KANA   && index00 == VirtualKey::wsdEISU ||
+			seesawType00 == VirtualKey::KANA_OTHERS  && index00 == VirtualKey::wsdHIRA ||
+			seesawType00 == VirtualKey::KANA_EISUU   && index00 == VirtualKey::wsdHIRA ||
+			seesawType00 == VirtualKey::EISUU_OTHERS && index00 == VirtualKey::wsdEISU){
 			// 起点のモードに切り替えた時点からタイマーをかける｡
 			// タイムアウト後は、フラグseesaw_init2_が立つので、
 			// 次に同じseesawキーが押された時は､CommonData.hppの(後処理AA)が実行されて、モードは変化しない｡
 			// これで、トグル系の最大の欠点がついに解消｡
 			//2011.04.09(土)、15(金)
-			RemapFunc::KeyToKey::static_setTimeoutMS_seesaw_init();
+			VirtualKey::static_setTimeoutMS(VirtualKey::CALLBACK_SEESAW_INIT);
 		}
 
 	  } else {	// replaceの場合
 		int sign00;	//符号= -1,1 
-		  if(skipType00 == CommonData::SKIP_EISUU_KANA ||
-		  	 skipType00 == CommonData::SKIP_KANA ||
-		  	 skipType00 == CommonData::SKIP_EISUU){
+		  if(skipType00 == VirtualKey::SKIP_EISUU_KANA ||
+		  	 skipType00 == VirtualKey::SKIP_KANA ||
+		  	 skipType00 == VirtualKey::SKIP_EISUU){
 		  	//2011.04.06(水)、15(金)、17(日)
-			CommonData::reverse_sign_REPLACE_PLUS_MINUS(9);	// カウンターを進める。次の時に､方向を逆転させるため｡
+			VirtualKey::reverse_sign_REPLACE_PLUS_MINUS(9);	// カウンターを進める。次の時に､方向を逆転させるため｡
 		  }
 
-		  if(skipType00 == CommonData::SKIP_NONE_MINUS ||
-	  		 skipType00 == CommonData::SKIP_PRE_MINUS){
+		  if(skipType00 == VirtualKey::SKIP_NONE_MINUS ||
+	  		 skipType00 == VirtualKey::SKIP_PRE_MINUS){
 			sign00 = -1;
 		  } else {	// REPLACE_MINUS,MINUS2の場合
 		  	// 2011.04.06(水) REPLACE_PLUS_MINUS_SKIP系もとりあえず､正方向とするが、この値は用いない。
@@ -670,52 +1208,52 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 
 		if(!use_ainu){
-		   skip00[CommonData::wsdAINU] = 1;	// AINUをスキップする。
+		   skip00[VirtualKey::wsdAINU] = 1;	// AINUをスキップする。
 											//2011.04.11(月) チェックボックスで設定するようにした｡
 		}
-		if(skipType00 == CommonData::SKIP_NONE_PLUS ||
-	  		 skipType00 == CommonData::SKIP_NONE_MINUS){
+		if(skipType00 == VirtualKey::SKIP_NONE_PLUS ||
+	  		 skipType00 == VirtualKey::SKIP_NONE_MINUS){
 			replace_num00 = 1;
 		} else {	// 2011.04.05(火)
-			if(skipType00 == CommonData::SKIP_EISUU_KANA){
-				skip00[CommonData::wsdEISU] = 1;	// 英字モードをスキップ
-				skip00[CommonData::wsdHIRA] = 1;	// ひらがなモード
+			if(skipType00 == VirtualKey::SKIP_EISUU_KANA){
+				skip00[VirtualKey::wsdEISU] = 1;	// 英字モードをスキップ
+				skip00[VirtualKey::wsdHIRA] = 1;	// ひらがなモード
 				replace_num00 = 3;
-			} else if(skipType00 == CommonData::SKIP_KANA){
-				skip00[CommonData::wsdHIRA] = 1;	// ひらがなモード
+			} else if(skipType00 == VirtualKey::SKIP_KANA){
+				skip00[VirtualKey::wsdHIRA] = 1;	// ひらがなモード
 				replace_num00 = 3;
-			} else if(skipType00 == CommonData::SKIP_EISUU){
-				skip00[CommonData::wsdEISU] = 1;	// 英字モード
+			} else if(skipType00 == VirtualKey::SKIP_EISUU){
+				skip00[VirtualKey::wsdEISU] = 1;	// 英字モード
 				replace_num00 = 3;
 			} else {	// SKIP_PRE_PLUS(MINUS)
 				replace_num00 = 2;
 				// スキップするのは前のモードなので､それは以下のget_index_for_replaceWSD関数の中で与えられる｡
 			}
 		}
-		index00 = CommonData::get_index_for_replaceWSD(sign00, skip00, replace_num00);	//2011.04.01(金)、05(火)
+		index00 = VirtualKey::get_index_for_replaceWSD(sign00, skip00, replace_num00);	//2011.04.01(金)、05(火)
 	  }
 
-    if (index00 == CommonData::wsdEISU) {					//英字
+    if (index00 == VirtualKey::wsdEISU) {					//英字
 		// 2011.04.14(木) KeyCode::JIS_EISUU、ModifierFlag::NONE
     	newkeycode_ = KeyCode::JIS_COLON;
     	newflag_    = ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_L;
-    } else if (index00 == CommonData::wsdHIRA) {			//ひらがな
+    } else if (index00 == VirtualKey::wsdHIRA) {			//ひらがな
 		// 2011.04.14(木) KeyCode::JIS_KANA、ModifierFlag::NONE
     	newkeycode_ = KeyCode::J;
     	newflag_    = ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_L;
-    } else if (index00 == CommonData::wsdKATA) {			//カタカナ
+    } else if (index00 == VirtualKey::wsdKATA) {			//カタカナ
 		// 2011.04.14(木) KeyCode::JIS_KANA、ModifierFlag::SHIFT_L
     	newkeycode_ = KeyCode::K;
     	newflag_    = ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_L;
-    } else if (index00 == CommonData::wsdHKAT) {			//半角カタカナ
+    } else if (index00 == VirtualKey::wsdHKAT) {			//半角カタカナ
     	//2011.03.31(木)
     	newkeycode_ = KeyCode::SEMICOLON;
     	newflag_    = ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_L;
-    } else if (index00 == CommonData::wsdFEIS) {			//全角英数
+    } else if (index00 == VirtualKey::wsdFEIS) {			//全角英数
     	//2011.04.01(金)
     	newkeycode_ = KeyCode::L;
     	newflag_    = ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_L;
-    } else if (index00 == CommonData::wsdAINU) {			// AINU
+    } else if (index00 == VirtualKey::wsdAINU) {			// AINU
 		// 2011.04.14(木) KeyCode::JIS_KANA、ModifierFlag::SHIFT_Lは、「ことえり」のバグのため突然おかしくなる｡
     	newkeycode_ = KeyCode::JIS_BRACKET_RIGHT;
     	newflag_    = ModifierFlag::CONTROL_L | ModifierFlag::SHIFT_L;
@@ -736,12 +1274,12 @@ namespace org_pqrs_KeyRemap4MacBook {
 	if(params.ex_iskeydown){
 	  bool result00 = false;	//2011.04.16(土)
 	  if(learn_workspacedata){
-		result00 = CommonData::replace_WSD(newkeycode_, newflag_);	//作業用のworkspacedataをすり替える｡
+		result00 = VirtualKey::replace_WSD(newkeycode_, newflag_);	//作業用のworkspacedataをすり替える｡
 	  }
 	  if(result00){	//学習済ですり替えられたので､次のキー入力時にCore.cppでの更新をしないようにする。
-		RemapFunc::KeyToKey::static_set_pass_initialize(RemapFunc::KeyToKey::INIT_NOT);
+		VirtualKey::static_set_pass_initialize(VirtualKey::INIT_NOT);
 	  } else {		//workspacedataの学習をしない設定の場合を含めて、未学習の場合も､次のキーの時に、作業用のworkspacedataを更新する必要がある｡
- 	  	RemapFunc::KeyToKey::static_set_pass_initialize(RemapFunc::KeyToKey::INIT_DO);
+ 	  	VirtualKey::static_set_pass_initialize(VirtualKey::INIT_DO);
 	  }
 	}
 
@@ -832,7 +1370,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 		!(Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore) ||
 		  Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata)) ? 
 			savedinputmodedetail_ = CommonData::getcurrent_workspacedata().inputmodedetail :
-			savedinputmodedetail_ = CommonData::getwsd_public().inputmodedetail;
+			savedinputmodedetail_ = VirtualKey::getwsd_public().inputmodedetail;
         currentinputmodedetail_ = savedinputmodedetail_;
 
 
@@ -859,8 +1397,8 @@ namespace org_pqrs_KeyRemap4MacBook {
 		// リストアするということは既に学習済なので､INT_DOが必要なケースは無い｡
 		// 2011.03.07(月)、08(火)
 		if(Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata)){
-		  CommonData::restore_WSD(savedinputmodedetail_);
-		  RemapFunc::KeyToKey::static_set_pass_initialize(RemapFunc::KeyToKey::INIT_NOT);	//次のキー入力時にCore.cppでの更新をしないため
+		  VirtualKey::restore_WSD(savedinputmodedetail_);
+		  VirtualKey::static_set_pass_initialize(VirtualKey::INIT_NOT);	//次のキー入力時にCore.cppでの更新をしないため
 		}
 
 
