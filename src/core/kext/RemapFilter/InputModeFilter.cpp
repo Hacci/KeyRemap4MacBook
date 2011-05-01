@@ -44,8 +44,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 
 //Haci
-		  !(Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore) ||
-		    Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata)) ? 
+		  Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_remap_jis_ignore_improvement_IM_changing) ? 
           	  current = CommonData::getcurrent_workspacedata().inputmode :
           	  current = VirtualKey::getwsd_public().inputmode;			// 2011.03.03(木)
 			// 連打遅延対策あるいはモード変更キー押下時の遅延対策を切り替えるチェックボックスの設定がオンなら作業用のworkspacedataを使用。
@@ -60,8 +59,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 
 //Haci
-		  !(Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore) ||
-		    Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata)) ? 
+		  Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_remap_jis_ignore_improvement_IM_changing) ? 
           	  current = CommonData::getcurrent_workspacedata().inputmodedetail :
           	  current = VirtualKey::getwsd_public().inputmodedetail;	// 2011.01.13(木)〜02.09(水)
 			// 連打遅延対策あるいはモード変更キー押下時の遅延対策を切り替えるチェックボックスの設定がオンなら作業用のworkspacedataを使用。

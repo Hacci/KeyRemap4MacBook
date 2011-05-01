@@ -82,6 +82,13 @@
         <item>
           <name> Japanese-Inputmode switching Delay : MacOS Bug</name>
           <list>
+
+            <item>
+              <name>Ignore the improvement of Inputmode changing </name><!-- Haci 2011.05.01 -->
+              <appendix>IMの切り替えの際の改善処理を無効にする</appendix>
+              <identifier essential="true">remap.jis_ignore_improvement_IM_changing</identifier>
+            </item>
+
             <item>
               <name>Perfectly remove Typos just when switching Inputmode </name><!-- Haci 2011.03.06(日) -->
               <appendix>入力モードが変わる瞬間に次のキーを押した時の誤入力の完全排除: 各workspacedataの学習</appendix>

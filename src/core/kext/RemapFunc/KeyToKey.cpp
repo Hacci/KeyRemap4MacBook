@@ -93,11 +93,9 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 
 //Haci
-	  int ignore_vk_restore = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore);
-		// VK_JIS_TEMPORARY_RESTOREを無視するチェックボックスのオンオフ値
-		//2011.01.26(水)〜02.04(金)
-	  int learn_workspacedata = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata);
-		// 2011.03.07(月) 入力モード変更遅延対策の中の「入力モード変更時の誤入力対策」を行うかどうかのチェックボックス。通常はオン。
+	  int ignore_improveIM = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_remap_jis_ignore_improvement_IM_changing);
+		//「IMの切り替えの際の改善処理を無効にする」チェックボックスのオンオフ値
+		//2011.05.01
 	  KeyCode firstKey      = (*toKeys_)[0].key;	// 最初のtoKey
       Flags   firstKeyFlags = (*toKeys_)[0].flags;	// 最初のtoKeyFlags 2011.03.06(日)
 
@@ -193,8 +191,8 @@ namespace org_pqrs_KeyRemap4MacBook {
 			if( firstKey == KeyCode::JIS_KANA || firstKey == KeyCode::JIS_EISUU){
 			  // モード変更キー(JIS_KANA,JIS_EISUU)にリマップした場合(モード変更キーを指定するケースは大抵ここに来る)
 			  // トグルキーはHandle_VK_JIS_TOGGLE_EISUU_KANA::handle内で処理
-			  // VK_JIS_COMMAND_SPACEも同様｡
-			  if(!learn_workspacedata){
+			  // VK_JIS_IM_CHANGEも同様｡
+			  if(ignore_improveIM){
 			  	VirtualKey::set_pass_initialize(VirtualKey::INIT_DO);
 				// モード変更キーにリマップした場合(モード変更キーを指定するケースは大抵ここに来る)、
 				// 次の文字キーが押された時にCore.cppでこの条件によって、wsd_publicとSavedIMDの初期化が実行されて全てがうまく行く｡
@@ -208,7 +206,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 					  firstKey != KeyCode::VK_JIS_TEMPORARY_AINU     &&
 					  firstKey != KeyCode::VK_JIS_TEMPORARY_RESTORE  &&
 					  VirtualKey::get_case1_pass_restore() == 0 &&
-					  ignore_vk_restore){
+					  !ignore_improveIM){
 				// toKeyが1つだけのときに普通はVK_JIS_TEMPORARY系は指定しないので、大抵は､必ずここが実行される。
 				// 例えば､半角スペースにリマップしたキーを押して変換してすぐに(RESTOREタイマーがタイムアウトする前に)、
 				// KeyCode::RETURNをKeyCode::ENTERにリマップしているキーで確定すると､英字モードのままで戻らないので､ここでリストアされる。
@@ -219,8 +217,8 @@ namespace org_pqrs_KeyRemap4MacBook {
 			  VirtualKey::vk_restore(remapParams.params, 0);		//2011.03.04(金) 汎用化関数を使用して、VK_JIS_TEMPORARY_RESTOREを挿入
 			}
 
- 			if(ignore_vk_restore || learn_workspacedata){
-				// VK_RESTORE無視のとき、あるいはworkspacedata学習方式の場合は､タイマーを停止する。
+ 			if(!ignore_improveIM){
+				// IM改良無効でなければ､タイマーを停止する。
 				VirtualKey::static_cancelTimeout();
 				VirtualKey::set_pass_initialize(VirtualKey::INIT_NOT);		// 次のキー入力時に更新の必要がないので。
 			}
@@ -255,7 +253,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 			   firstKey != KeyCode::VK_JIS_TEMPORARY_ROMAN    &&
 			   firstKey != KeyCode::VK_JIS_TEMPORARY_AINU     &&
 			   firstKey != KeyCode::VK_JIS_TEMPORARY_RESTORE  &&
-	 		   ignore_vk_restore){
+	 		   !ignore_improveIM){
 				// VK_JIS_TEMPORARY系キーが1番目に指定されていなければ、VK_JIS_TEMPORARY_RESTOREをキューの先頭に挿入し、モードを戻す｡
 				// 遅延対策のチェックボックスが有効の場合のみ。戻すべきかどうかを下手に判定をするよりは、必ずリストアすればいい。
 				// 10.2.16〜3.2,2011.01.17(月)〜3.11(金)
@@ -286,7 +284,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 
 //Haci
-			  	if(i == size -1 && (*toKeys_)[i].key == KeyCode::VK_JIS_TEMPORARY_RESTORE && ignore_vk_restore){
+			  	if(i == size -1 && (*toKeys_)[i].key == KeyCode::VK_JIS_TEMPORARY_RESTORE && !ignore_improveIM){
 			  		// 最後のキーがVK_JIS_TEMPORARY_RESTOREであれば、いったん無視する。
 			  		// 最後にVK_NONEを入れたりすることもあるかもしれないが､とりあえず普通のケースのみ。
 			  		//2011.01.23(日)〜02.22(火)
@@ -295,7 +293,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 			      // VK_RESTORE無視、モードキー押下時遅延対策のチェックボックスのどちらでも。
 			      // トグルキーはHandle_VK_JIS_TOGGLE_EISUU_KANA::handle側で処理
 			   	  //2011.02.17(木)、03.08(火) 
-				  if(!learn_workspacedata){
+				  if(ignore_improveIM){
 	 				VirtualKey::set_pass_initialize(VirtualKey::INIT_DO);		//2011.03.01(火)
 	 				//ここはtoKeyが2つ以上のケースなので、モード変更キーを指定することはまずないが、念の為。
 	 				//ほとんどの場合は、toKeyが1つだけのCase1で処理される｡
@@ -351,14 +349,14 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 
 //Haci
-			if(ignore_vk_restore && lastKey == KeyCode::VK_JIS_TEMPORARY_RESTORE){
+			if(!ignore_improveIM && lastKey == KeyCode::VK_JIS_TEMPORARY_RESTORE){
 			  //2011.02.06(日)〜03.02(水)、03.11(金)
 			  // VK_JIS_TEMPORARY_RESTOREを無視した場合のみ、RESTORE用として専用タイマーを再起動する｡
 			  // コールバック関数の中の実行を変えるため。
 			  // RESTOREを実行するのは見た目(画面右上の表示)の問題だけで、この処理がなくても次のキー入力時に元に戻るようにしてある。
 				///timer_restore2_.cancelTimeout();	//2011.03.11(金) 念の為、タイマーを停止｡停止しなくても特に問題ないので､とりあえず外す｡
 				VirtualKey::static_setTimeoutMS(VirtualKey::CALLBACK_RESTORE);
-			} else if(ignore_vk_restore || learn_workspacedata) {	// タイマーを停止する｡
+			} else if(!ignore_improveIM) {	// タイマーを停止する｡
 				VirtualKey::static_cancelTimeout();
 			}
 

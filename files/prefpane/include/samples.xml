@@ -1711,6 +1711,71 @@
           <autogen>--KeyToKey-- KeyCode::A, KeyCode::A, KeyCode::VK_JIS_TEMPORARY_AINU, KeyCode::I, KeyCode::U, KeyCode::VK_JIS_TEMPORARY_RESTORE</autogen>
           <autogen>--KeyToKey-- KeyCode::B, KeyCode::VK_JIS_TEMPORARY_AINU, KeyCode::A, KeyCode::I, KeyCode::U, KeyCode::VK_JIS_TEMPORARY_RESTORE</autogen>
         </item>
+
+
+
+        <item>
+          <name> VK_JIS_IM_CHANGE_SKIP_KANA_EISUU </name><!-- 2011.04.30 -->
+          <appendix>Smart Eisuu,Kana</appendix>
+          <appendix>improve the weak pount of toggle key by timeout</appendix>
+          <appendix>[sft]+Kana  to change Others with skipping Kana and Eisuu, and more smart functions</appendix>
+          <appendix>   direction changes automatically each time  </appendix>
+          <appendix>[Eisuu]     to toggle Eisuu and Kana  (do not change from Eisuu after timeout) </appendix>
+          <appendix>[Kana]      to toggle Kana  and Others(do not change from Kana  after timeout) </appendix>
+          <identifier>remap.samples_smart_eisuu_kana</identifier>
+          <autogen>--KeyToKey-- KeyCode::JIS_KANA , VK_SHIFT | ModifierFlag::NONE, KeyCode::VK_JIS_IM_CHANGE_SKIP_KANA_EISUU, Option::NOREPEAT</autogen>
+          <autogen>--KeyToKey-- KeyCode::JIS_EISUU, ModifierFlag::NONE,            KeyCode::VK_JIS_IM_CHANGE_EISUU_KANA,  Option::NOREPEAT</autogen>
+          <autogen>--KeyToKey-- KeyCode::JIS_KANA,  ModifierFlag::NONE ,           KeyCode::VK_JIS_IM_CHANGE_KANA_OTHERS, Option::NOREPEAT</autogen>
+        </item>
+
+        <item>
+          <name> VK_JIS_IM_CHANGE_SKIP_EISUU </name><!-- 2011.04.30 -->
+          <appendix>smartly improve Command+Space</appendix>
+          <appendix>[opt]+[cmd]+space　to change Others with skipping Eisuu</appendix>
+          <appendix>   direction changes automatically each time  </appendix>
+          <appendix>[cmd]+space　　　　to toggle Eisuu and Others(do not change from Eisuu after timeout) </appendix>
+          <identifier>remap.samples_vk_jis_im_change_skip_eisuu</identifier>
+          <autogen>--KeyToKey-- KeyCode::SPACE, VK_OPTION | VK_COMMAND | ModifierFlag::NONE, KeyCode::VK_JIS_IM_CHANGE_SKIP_EISUU, Option::NOREPEAT</autogen>
+          <autogen>--KeyToKey-- KeyCode::SPACE, VK_COMMAND | ModifierFlag::NONE, KeyCode::VK_JIS_IM_CHANGE_EISUU_OTHERS, Option::NOREPEAT</autogen>
+        </item>
+
+        <item>
+          <name> VK_JIS_IM_CHANGE_SKIP_KANA </name><!-- 2011.04.30 -->
+          <appendix>smartly improve Command+Space</appendix>
+          <appendix>[opt]+[cmd]+space　to change Others with skipping Kana</appendix>
+          <appendix>   direction changes automatically each time  </appendix>
+          <appendix>[cmd]+space　　　　to toggle Kana and Others(do not change from Kana after timeout) </appendix>
+          <identifier>remap.samples_vk_jis_im_change_skip_kana</identifier>
+          <autogen>--KeyToKey-- KeyCode::SPACE, VK_OPTION | VK_COMMAND | ModifierFlag::NONE, KeyCode::VK_JIS_IM_CHANGE_SKIP_KANA, Option::NOREPEAT</autogen>
+          <autogen>--KeyToKey-- KeyCode::SPACE, VK_COMMAND | ModifierFlag::NONE, KeyCode::VK_JIS_IM_CHANGE_KANA_OTHERS, Option::NOREPEAT</autogen>
+        </item>
+
+        <item>
+          <name> VK_JIS_IM_CHANGE_SKIP_PRE </name><!-- 2011.04.30 -->
+          <appendix>improve Command+Space</appendix>
+          <appendix>[opt]+[cmd]+space　to change forwards with skipping previous</appendix>
+          <appendix>[opt]+[cmd]+[sft]+space　to change backwards with skipping previous</appendix>
+          <appendix>[cmd]+space　　　　to toggle current and previous</appendix>
+          <identifier>remap.samples_vk_jis_im_change_skip_pre</identifier>
+          <autogen>--KeyToKey-- KeyCode::SPACE, VK_OPTION | VK_COMMAND | ModifierFlag::NONE, KeyCode::VK_JIS_IM_CHANGE_SKIP_PRE_FORWARD, Option::NOREPEAT</autogen>
+          <autogen>--KeyToKey-- KeyCode::SPACE, VK_OPTION | VK_COMMAND | VK_SHIFT | ModifierFlag::NONE, KeyCode::VK_JIS_IM_CHANGE_SKIP_PRE_BACK, Option::NOREPEAT</autogen>
+          <autogen>--KeyToKey-- KeyCode::SPACE, VK_COMMAND | ModifierFlag::NONE, KeyCode::VK_JIS_IM_CHANGE_CUR_PRE, Option::NOREPEAT</autogen>
+        </item>
+
+        <item>
+          <name> VK_JIS_IM_CHANGE_SKIP_NONE </name><!-- 2011.04.30 -->
+          <appendix>Command+Space almost as usual(without MacOS bug)</appendix>
+          <appendix>[opt]+[cmd]+space　to change forwards without skipping</appendix>
+          <appendix>[opt]+[cmd]+[sft]+space　to change backwards without skipping</appendix>
+          <appendix>[cmd]+space　　　　to toggle current and previous</appendix>
+          <identifier>remap.samples_vk_jis_im_change_skip_none</identifier>
+          <autogen>--KeyToKey-- KeyCode::SPACE, VK_OPTION | VK_COMMAND | ModifierFlag::NONE, KeyCode::VK_JIS_IM_CHANGE_SKIP_NONE_FORWARD, Option::NOREPEAT</autogen>
+          <autogen>--KeyToKey-- KeyCode::SPACE, VK_OPTION | VK_COMMAND | VK_SHIFT | ModifierFlag::NONE, KeyCode::VK_JIS_IM_CHANGE_SKIP_NONE_BACK, Option::NOREPEAT</autogen>
+          <autogen>--KeyToKey-- KeyCode::SPACE, VK_COMMAND | ModifierFlag::NONE, KeyCode::VK_JIS_IM_CHANGE_CUR_PRE, Option::NOREPEAT</autogen>
+        </item>
+
+
+
       </list>
     </item>
   </list>

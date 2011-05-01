@@ -54,12 +54,12 @@ namespace org_pqrs_KeyRemap4MacBook {
 //KeyRemap4MacBook_bridge::GetWorkspaceData::Reply VirtualKey::wsd_save_[7];
   BridgeWorkSpaceData VirtualKey::wsd_public_; 		//2011.01.13(木) 作業用のworkspacedata
   BridgeWorkSpaceData VirtualKey::wsd_save_[7];		//2011.03.05(土) workspacedataの学習用
-  int VirtualKey::pre_index2_ = -1;					//2011.03.29(火) VK_JIS_COMMAND_SPACE用
-  int VirtualKey::cur_index2_ = -1;					//2011.03.29(火) VK_JIS_COMMAND_SPACE用
-  int VirtualKey::others_index2_ = -1;				//2011.04.05(火) VK_JIS_COMMAND_SPACE用
-  int VirtualKey::sign_plus_minus2_ = -99;			//2011.04.06(水) REPLACE_PLUS_MINUS用の符号
-  int VirtualKey::counter_plus_minus2_ = 0;			//2011.04.06(水) REPLACE_PLUS_MINUS用の連続実行をカウントする。
-  int VirtualKey::pre_counter_plus_minus2_ = 0;		//2011.04.06(水) REPLACE_PLUS_MINUS用のリマップ前の上記カウンター値
+  int VirtualKey::pre_index2_ = -1;					//2011.03.29(火) VK_JIS_IM_CHANGE用
+  int VirtualKey::cur_index2_ = -1;					//2011.03.29(火) VK_JIS_IM_CHANGE用
+  int VirtualKey::others_index2_ = -1;				//2011.04.05(火) VK_JIS_IM_CHANGE用
+  int VirtualKey::sign_plus_minus2_ = -99;			//2011.04.06(水) VK_JIS_IM_CHANGE_SKIP系用の符号
+  int VirtualKey::counter_plus_minus2_ = 0;			//2011.04.06(水) VK_JIS_IM_CHANGE_SKIP系用の連続実行をカウントする。
+  int VirtualKey::pre_counter_plus_minus2_ = 0;		//2011.04.06(水) VK_JIS_IM_CHANGE_SKIP系用のリマップ前の上記カウンター値
   bool VirtualKey::seesaw_init2_ = false;			//2011.04.09(土) = 1:タイムアウト後にseesawの起点にする。
 
 //Haci(KeyToKey)
@@ -144,9 +144,10 @@ namespace org_pqrs_KeyRemap4MacBook {
     void
     VirtualKey::static_set_case1_pass_restore(int case1_pass_restore00)
     {
-	  int ignore_vk_restore = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore);
-		// VK_JIS_TEMPORARY_RESTOREを無視するチェックボックスのオンオフ値
-	  if(!ignore_vk_restore || case1_pass_restore00 != 0 && case1_pass_restore00 != 1) return;
+	  int ignore_improveIM = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_remap_jis_ignore_improvement_IM_changing);
+		//「IMの切り替えの際の改善処理を無効にする」チェックボックスのオンオフ値
+		//2011.05.01
+	  if(ignore_improveIM || case1_pass_restore00 != 0 && case1_pass_restore00 != 1) return;
       case1_pass_restore2_ = case1_pass_restore00;
     }
 
@@ -176,7 +177,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 			pass_initialize2_ = INIT_NOT;	// 元に戻るだけなので､次のキー入力時に､Core.cppで作業用のworkspaces値などを初期化させないため。
 		} else if(callback2_ == CALLBACK_SEESAW_INIT){
 			// トグル系の最大の欠点の防止策
-			// VK_JIS_COMMAND_SPACE_SEESAW系のキーで、起点(固定)の入力モードに切り替えた時にこのタイマーが起動される｡
+			// VK_JIS_IM_CHANGE系のトグルキーで、起点(固定)の入力モードに切り替えた時にこのタイマーが起動される｡
 			// タイムアウト内に押せばトグルし(2度押しと似ている)､タイムアウト後なら起点のモードのままにする。
 			// そのために、ここで、フラグを初期化する｡
 			// 2011.04.09(土)
@@ -225,7 +226,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 //		・作業用のworkspacedataの初期化(次のキー入力時に) ...これが基本で、モード変更キーが押された場合に(押されたかどうかはチェックするまでもなく)、
 //														切替遅延があっても､タイムアウト後には正しくなっているはずという前提｡
 //	 	・入力モードのリストア							  ...VK_JIS_TEMPORARY_RESTOREを無視した場合
-//		・VK_COMMAND_SPACE_SEESAW系で起点(固定)となっているモードに切り替えた後の切替ロック
+//		・VK_JIS_IM_CHANGE系で起点(固定)となっているモードに切り替えた後の切替ロック
 //	 に共用できる仕組みにしてある。3つはお互いに独立しているので､かぶることはない。
 
 //Haci
@@ -244,7 +245,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 //		stage00 = POST_REMAP:       リマップ前。KeyToKeyでリマップするキー、全くリマップ指定のないキーの共通処理をする。
 //									  ・タイマーを停止。
 //				= JUST_AFTER_REMAP: リマップ直後
-//									  ・VK_COMMAND_SPACE_REPLACE_PLUS_MINUS系の符号を逆転。
+//									  ・VK_JIS_IM_CHANGE_SKIP系の符号を逆転。
 //				= NON_REMAPPED:     全くリマップ指定のないキーの処理をする。
 //									  ・タイマーを起動。
 //	2010.2.14〜3.5
@@ -260,16 +261,12 @@ namespace org_pqrs_KeyRemap4MacBook {
 	  bool is_eisuu_kana_kanashift;	//10.2.15 モード変更のための英数キー、かなキーが押されている。
 	  bool isonCCOSonly;	//10.2.16 =1: モディファイアーとしてCCOS(Command,Control,Option,Shift)のみが押されていて、文字キーは押されていない。
 	  int pass_initialize00;	//2011.03.01(火)
-	  int ignore_vk_restore = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore);	
-	  			//2011.02.05(土) checkbox.xmlの「General --- Ignore VK_JIS_TEMPORARY_RESTORE」の設定値
-	  int learn_workspacedata = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata);
-				// 2011.03.07(月) 「モード変更キー押下時の遅延対策」を行うかどうかのチェックボックス。効果を確かめるために分けてあるが､通常はオン。
-///	  int restore_after_timeout = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_restore_after_timeout);
-				// 2011.03.08(火) 「タイムアウト後のリストア」を行うかどうかのチェックボックス。
+	  int ignore_improveIM = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_remap_jis_ignore_improvement_IM_changing);
+		//「IMの切り替えの際の改善処理を無効にする」チェックボックスのオンオフ値
+		//2011.05.01
 	  bool result00;	//2011.04.16(土)
 
-	  if(!ignore_vk_restore && !learn_workspacedata) return;	//2011.02.05(土)、03.08(火)
-			// restore_after_timeoutだけがオンの場合は無意味｡
+	  if(ignore_improveIM) return;	//2011.02.05(土)、03.08(火),05.01
 
 	  keyisCCOS = params.key == KeyCode::COMMAND_L || params.key == KeyCode::COMMAND_R ||
 	  			  params.key == KeyCode::CONTROL_L || params.key == KeyCode::CONTROL_R ||
@@ -301,16 +298,16 @@ namespace org_pqrs_KeyRemap4MacBook {
 	  KeyCode key00  = params.key;
 	  Flags   flag00 = params.flags;
 
-	  // VK_COMMAND_SPACE_REPLACE_PLUS_MINUS系の符号を逆転する。
+	  // VK_JIS_IM_CHANGE_SKIP系の符号を逆転する。
 	  //	2011.04.06(水)
 	  if(isKeyDown){	//キーダウン時
 		if(stage00 == POST_REMAP){	//リマップ前
-			VirtualKey::reverse_sign_REPLACE_PLUS_MINUS(0);	// VK_COMMAND_SPACEのリプレース用のカウンター値を記憶。
+			VirtualKey::reverse_sign_CHANGE_SKIP(0);	// VK_JIS_IM_CHANGEのリプレース用のカウンター値を記憶。
 		} else if(stage00 == JUST_AFTER_REMAP){	// リマップ直後
-			// VK_COMMAND_SPACE_REPLACE_PLUS_MINUS系の仮想キーが連続していなければ、符号を逆転｡
+			// VK_JIS_IM_CHANGE_SKIP系の仮想キーが連続していなければ、符号を逆転｡
 			// 例えば､Shift+かなに割り当てている場合は､Shiftキーをキーアップした時も含む｡
-			// カウンターが進んでいなければ、VK_COMMAND_SPACE_REPLACE_PLUS_MINUS系が実行されなかったと判断する｡
-			VirtualKey::reverse_sign_REPLACE_PLUS_MINUS(1);
+			// カウンターが進んでいなければ、VK_JIS_IM_CHANGE_SKIP系が実行されなかったと判断する｡
+			VirtualKey::reverse_sign_CHANGE_SKIP(1);
 			return;
 		}
 	  }
@@ -336,7 +333,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 		  VirtualKey::static_cancelTimeout();	//10.2.28
 	  }
 
-	  if(stage00 == POST_REMAP && learn_workspacedata){
+	  if(stage00 == POST_REMAP && !ignore_improveIM){
 		//(C0) 英字・ひらがな・カタカナ・アイヌのworkspacedataをそれぞれ学習(保存)する。
 	  	// 2011.03.05(土)、07(月)、10(木)
 		VirtualKey::learn_WSD();
@@ -355,7 +352,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 	  bool conC3   = !isPPP && stage00 == NON_REMAPPED;
 	  		//(条件C3)   通常キーで、リマップ無し
 
-	  if(!learn_workspacedata){ // 学習のチェックボックスがオフの場合
+	  if(ignore_improveIM){ // IM改良無効のチェックボックスがオンの場合
 	    if (conC2_1 || conC2_2){
 			//(C2) 作業用のWSD(workspacedata)とSavedIMDの初期化
 			//	2011.02.18(金)〜10(木)
@@ -364,7 +361,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 						//条件1(conC2_1)なら次のキー入力時に､初期化する指定、条件2(conC2_2)なら初期化しない指定を設定する。
 			Handle_VK_JIS_TEMPORARY::resetSavedIMD();	//2011.02.18(金) VK_JIS_TEMPORARY系の保存値を初期化。
 	    }
-	  } else { // 学習がオンの場合
+	  } else { // IM改良無効がオフの場合
 	    if (conC2_1){ // リマップ無しの素のモード変更キー
 			//(C2) 作業用のWSD(workspacedata)とSavedIMDの初期化
 			//	2011.03.05(土)
@@ -400,21 +397,21 @@ namespace org_pqrs_KeyRemap4MacBook {
 //Haci
   //--------------------------------------------------------
   // Core.cppでリマップ前後に実行して、
-  // REPLACE_PLUS_MINUS_SKIP系が実行した時のカウンターがカウントアップしていれば何もせず､
+  // VK_JIS_IM_CHANGE_SKIP系が実行した時のカウンターがカウントアップしていれば何もせず､
   // カウントアップしていなければ､符号を逆転する。
   // when00 = 0: リマップ前
   //		= 1: リマップ直後(リマップしなかった場合も含む)
-  //		= 9: REPLACE_PLUS_MINUS_SIP系のキーダウン時
+  //		= 9: VK_JIS_IM_CHANGE_SKIP系のキーダウン時
   // 2011.04.06(水)
   void
-  VirtualKey::reverse_sign_REPLACE_PLUS_MINUS(int when00)
+  VirtualKey::reverse_sign_CHANGE_SKIP(int when00)
   {
     if(when00 == 0){			// リマップ前
 		pre_counter_plus_minus2_ = counter_plus_minus2_; //リマップ前の値を保存
     } else if(when00 == 1) {	// リマップ直後
       if (counter_plus_minus2_ == pre_counter_plus_minus2_ && counter_plus_minus2_ > 0){
 		// counter_plus_minus2_が1以上の場合
-		// リマップ後に､カウンターが進んでないので､REPLACE_PLUS_MINUSは実行されずに､他のキーが押されたことを意味するので、
+		// リマップ後に､カウンターが進んでないので､VK_JIS_IM_CHANGE_SKIP系は実行されずに､他のキーが押されたことを意味するので、
 		// カウンターを初期化し､符号を逆転する。
 		pre_counter_plus_minus2_ = 0;
 		counter_plus_minus2_ = 0;
@@ -424,7 +421,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 		sign_plus_minus2_ = - sign_plus_minus2_;
 	  } else {
       }
-    } else { // REPLACE_PLUS_MINUSのキーダウン時
+    } else { // VK_JIS_IM_CHANGE_SKIP系のキーダウン時
       ++counter_plus_minus2_;
     }
   }
@@ -505,7 +502,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 // 		  だから、VK_RESTOREを一旦無視しても、次のキーは同じフィルターを確実に通ることが保証される。
 // (目的2) モード変更キーを押した時､あるいは、toKeyが日本語入力モード変更キーの時､それと同時に次の文字キーを打つと､遅延のせいで誤入力が起きるので､それも防止する｡
 //		  これにより、遅延バグによる誤入力は完全に排除できる。ほとんど同時に押しても大丈夫。
-//		  ただし、オリジナルのCommand+Spaceのように動作が特定できないものは救えないが、VK_COMMAND_SPACE系ではこの仕組みを利用して完璧｡
+//		  ただし、オリジナルのCommand+Spaceのように動作が特定できないものは救えないが、VK_JIS_IM_CHANGE系ではこの仕組みを利用して完璧｡
 //	mode00 = 0(目的1、2共通):作業用のworkspacedataの更新のみ(学習方式でない場合も)
 //		   以下は学習方式の場合のみ。
 //		   = 1(目的2):       最新の正しいworkspacedata値を日本語入力詳細モード毎に個別に学習(保存)する。
@@ -518,8 +515,9 @@ namespace org_pqrs_KeyRemap4MacBook {
   bool
   VirtualKey::control_WSD(int mode00, KeyCode modekey00, Flags flag00, InputModeDetail IMD00)
   {
-    int learn_workspacedata = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata);
-				// 入力モード変更遅延対策の中の「モード変更時の誤入力対策」を行うかどうかのチェックボックス。通常はオン。
+	int ignore_improveIM = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_remap_jis_ignore_improvement_IM_changing);
+		//「IMの切り替えの際の改善処理を無効にする」チェックボックスのオンオフ値
+		//2011.05.01
 	InputModeDetail IMDsv;
 	int index00 = 1;	// 多次元配列のインデックス値
 	BridgeWorkSpaceData curWSD00 = CommonData::getcurrent_workspacedata();	//2011.04.27
@@ -532,7 +530,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 	  return true;
 	}
 
-	if(!(learn_workspacedata  && (mode00 == 1 || mode00 == 2 || mode00 == 3))) return false;
+	if(!(!ignore_improveIM && (mode00 == 1 || mode00 == 2 || mode00 == 3))) return false;
 
 	// 入力モード値を得る
 	if(mode00 == 1){	// 学習
@@ -557,7 +555,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 	  wsd_save_[index00] = curWSD00;	//学習
 	  return true;		//2011.04.16(土)
 
-	} else if((mode00 == 2 || mode00 == 3 ) && learn_workspacedata){
+	} else if((mode00 == 2 || mode00 == 3 ) && !ignore_improveIM){
 	  // 入力モード値に従って､そのモードのworkspacedataが学習済であれば、それを利用して、すり替える｡
 	  IMDsv = wsd_save_[index00].inputmodedetail;
 	  if(IMDsv != 0){
@@ -1056,14 +1054,13 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 
 //Haci
-    int ignore_vk_restore = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore);
-	  			//「連打遅延対策」を切り替えるチェックボックス
-	int learn_workspacedata = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata);
-				//「モード変更時の誤入力対策」を行うかどうかのチェックボックス。
+	int ignore_improveIM = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_remap_jis_ignore_improvement_IM_changing);
+		//「IMの切り替えの際の改善処理を無効にする」チェックボックスのオンオフ値
+		//2011.05.01
 
     if (params.ex_iskeydown) {
-      if (!(ignore_vk_restore || learn_workspacedata) && InputMode::JAPANESE == CommonData::getcurrent_workspacedata().inputmode ||
-      	   (ignore_vk_restore || learn_workspacedata) && InputMode::JAPANESE == VirtualKey::getwsd_public().inputmode) {
+      if (ignore_improveIM && InputMode::JAPANESE == CommonData::getcurrent_workspacedata().inputmode ||
+      	 !ignore_improveIM && InputMode::JAPANESE == VirtualKey::getwsd_public().inputmode) {
 		// チェックボックスの設定のいずれかがオンなら作業用のworkspacedataを使用。
 
 
@@ -1076,7 +1073,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 //Haci
 	  bool result00 = false;	//2011.04.16(土)
-	  if(learn_workspacedata){	// 学習機能の設定がチェックされていれば､作業用のworkspacedataをすり替える｡
+	  if(!ignore_improveIM){	// 学習機能の設定がチェックされていれば､作業用のworkspacedataをすり替える｡
 		result00 = VirtualKey::replace_WSD(newkeycode_, ModifierFlag::NONE);
 	  }
 	  if(result00){	//学習済ですり替えられたので､次のキー入力時にCore.cppでの更新をしないようにする。
@@ -1101,8 +1098,8 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 
 //Haci
-  KeyCode Handle_VK_JIS_COMMAND_SPACE::newkeycode_;
-  Flags   Handle_VK_JIS_COMMAND_SPACE::newflag_;
+  KeyCode Handle_VK_JIS_IM_CHANGE::newkeycode_;
+  Flags   Handle_VK_JIS_IM_CHANGE::newflag_;
   // ----------------------------------------------------------------------
   // Command+Spaceのバグ(時々モード変更がおかしくなる)の代替策として作成を開始し､
   // Command+Space、Option+Command+Spaceの不統一さ、使い難さを改良しつつ､
@@ -1115,10 +1112,11 @@ namespace org_pqrs_KeyRemap4MacBook {
   // 2011.03.29(火)〜04.15(金)
   // 2011.04.15(金) SEESAW_EISUU_OTHERSなど追加整理して､12種類の仮想キーとなった｡
   bool
-  Handle_VK_JIS_COMMAND_SPACE::handle(const Params_KeyboardEventCallBack& params)
+  Handle_VK_JIS_IM_CHANGE::handle(const Params_KeyboardEventCallBack& params)
   {
-	int learn_workspacedata = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata);
-				// 「モード変更時の誤入力対策」を行うかどうかのチェックボックス。
+	int ignore_improveIM = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_remap_jis_ignore_improvement_IM_changing);
+		//「IMの切り替えの際の改善処理を無効にする」チェックボックスのオンオフ値
+		//2011.05.01
 	int use_ainu = Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_use_ainu);
 				// 「モード変更時の誤入力対策」を行うかどうかのチェックボックス。
 	KeyCode key00  = params.key;
@@ -1128,48 +1126,48 @@ namespace org_pqrs_KeyRemap4MacBook {
 	int seesawType00 = -1;
 	int skipType00   = -1;		//2011.04.15(金)
 
-    if (key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_CUR_PRE ||
-        key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_SKIP_NONE  ||
-        key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_MINUS_SKIP_NONE ||
-        key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_SKIP_PRE ||
-        key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_MINUS_SKIP_PRE ||
+    if (key00 == KeyCode::VK_JIS_IM_CHANGE_CUR_PRE ||
+        key00 == KeyCode::VK_JIS_IM_CHANGE_SKIP_NONE_FORWARD  ||
+        key00 == KeyCode::VK_JIS_IM_CHANGE_SKIP_NONE_BACK ||
+        key00 == KeyCode::VK_JIS_IM_CHANGE_SKIP_PRE_FORWARD ||
+        key00 == KeyCode::VK_JIS_IM_CHANGE_SKIP_PRE_BACK ||
 
-        key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_EISUU_KANA ||
-        key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_EISUU_OTHERS ||
-        key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_KANA_EISUU ||
-        key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_KANA_OTHERS ||
-        key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_MINUS_SKIP_KANA_EISUU ||
-        key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_MINUS_SKIP_EISUU ||
-        key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_MINUS_SKIP_KANA){
+        key00 == KeyCode::VK_JIS_IM_CHANGE_EISUU_KANA ||
+        key00 == KeyCode::VK_JIS_IM_CHANGE_EISUU_OTHERS ||
+        key00 == KeyCode::VK_JIS_IM_CHANGE_KANA_EISUU ||
+        key00 == KeyCode::VK_JIS_IM_CHANGE_KANA_OTHERS ||
+        key00 == KeyCode::VK_JIS_IM_CHANGE_SKIP_KANA_EISUU ||
+        key00 == KeyCode::VK_JIS_IM_CHANGE_SKIP_EISUU ||
+        key00 == KeyCode::VK_JIS_IM_CHANGE_SKIP_KANA){
     } else {
       return false;
 	}
 
 	if(params.ex_iskeydown){	//キーダウン時の処理(始まり)----------------------
 		//2011.04.09(土)pm03:19 キーアップは最後の部分のみ｡
-	  if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_CUR_PRE){ // シーソー切替
+	  if(key00 == KeyCode::VK_JIS_IM_CHANGE_CUR_PRE){ // シーソー切替
 		seesawType00 = VirtualKey::CUR_PRE;
-	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_EISUU_KANA){
+	  } else if(key00 == KeyCode::VK_JIS_IM_CHANGE_EISUU_KANA){
 		seesawType00 = VirtualKey::EISUU_KANA;
-	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_KANA_OTHERS){
+	  } else if(key00 == KeyCode::VK_JIS_IM_CHANGE_KANA_OTHERS){
 		seesawType00 = VirtualKey::KANA_OTHERS;
-	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_KANA_EISUU){		//2011.04.15(金)
+	  } else if(key00 == KeyCode::VK_JIS_IM_CHANGE_KANA_EISUU){		//2011.04.15(金)
 		seesawType00 = VirtualKey::KANA_EISUU;
-	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_SEESAW_EISUU_OTHERS){	//2011.04.15(金)
+	  } else if(key00 == KeyCode::VK_JIS_IM_CHANGE_EISUU_OTHERS){	//2011.04.15(金)
 		seesawType00 = VirtualKey::EISUU_OTHERS;
-	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_SKIP_NONE){ // リプレース
-		skipType00 = VirtualKey::SKIP_NONE_PLUS;
-	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_SKIP_PRE){
-		skipType00 = VirtualKey::SKIP_PRE_PLUS;
-	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_MINUS_SKIP_NONE){
-		skipType00 = VirtualKey::SKIP_NONE_MINUS;
-	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_MINUS_SKIP_PRE){
-		skipType00 = VirtualKey::SKIP_PRE_MINUS;
-	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_MINUS_SKIP_KANA_EISUU){
+	  } else if(key00 == KeyCode::VK_JIS_IM_CHANGE_SKIP_NONE_FORWARD){ // リプレース
+		skipType00 = VirtualKey::SKIP_NONE_FORWARD;
+	  } else if(key00 == KeyCode::VK_JIS_IM_CHANGE_SKIP_PRE_FORWARD){
+		skipType00 = VirtualKey::SKIP_PRE_FORWARD;
+	  } else if(key00 == KeyCode::VK_JIS_IM_CHANGE_SKIP_NONE_BACK){
+		skipType00 = VirtualKey::SKIP_NONE_BACK;
+	  } else if(key00 == KeyCode::VK_JIS_IM_CHANGE_SKIP_PRE_BACK){
+		skipType00 = VirtualKey::SKIP_PRE_BACK;
+	  } else if(key00 == KeyCode::VK_JIS_IM_CHANGE_SKIP_KANA_EISUU){
 		skipType00 = VirtualKey::SKIP_EISUU_KANA;
-	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_MINUS_SKIP_KANA){	//2011.04.15(金)
+	  } else if(key00 == KeyCode::VK_JIS_IM_CHANGE_SKIP_KANA){	//2011.04.15(金)
 		skipType00 = VirtualKey::SKIP_KANA;
-	  } else if(key00 == KeyCode::VK_JIS_COMMAND_SPACE_REPLACE_PLUS_MINUS_SKIP_EISUU){	//2011.04.15(金)
+	  } else if(key00 == KeyCode::VK_JIS_IM_CHANGE_SKIP_EISUU){	//2011.04.15(金)
 		skipType00 = VirtualKey::SKIP_EISUU;
 	  }
 
@@ -1195,26 +1193,29 @@ namespace org_pqrs_KeyRemap4MacBook {
 		  	 skipType00 == VirtualKey::SKIP_KANA ||
 		  	 skipType00 == VirtualKey::SKIP_EISUU){
 		  	//2011.04.06(水)、15(金)、17(日)
-			VirtualKey::reverse_sign_REPLACE_PLUS_MINUS(9);	// カウンターを進める。次の時に､方向を逆転させるため｡
+			VirtualKey::reverse_sign_CHANGE_SKIP(9);	// カウンターを進める。次の時に､方向を逆転させるため｡
 		  }
 
-		  if(skipType00 == VirtualKey::SKIP_NONE_MINUS ||
-	  		 skipType00 == VirtualKey::SKIP_PRE_MINUS){
+		  if(skipType00 == VirtualKey::SKIP_NONE_BACK ||
+	  		 skipType00 == VirtualKey::SKIP_PRE_BACK){
 			sign00 = -1;
 		  } else {	// REPLACE_MINUS,MINUS2の場合
-		  	// 2011.04.06(水) REPLACE_PLUS_MINUS_SKIP系もとりあえず､正方向とするが、この値は用いない。
+		  	// 2011.04.06(水) VK_JIS_IM_CHANGE_SKIP系もとりあえず､正方向とするが、この値は用いない。
 			sign00 =  1;
 		  }
 
 
 		if(!use_ainu){
+		   // skip00[1-wsdMAX] = 0;	// 2011.05.01 SKIP_PREなどを実行した後でスキップ設定をクリアしないと、誤動作するので｡
 		   skip00[VirtualKey::wsdAINU] = 1;	// AINUをスキップする。
 											//2011.04.11(月) チェックボックスで設定するようにした｡
 		}
-		if(skipType00 == VirtualKey::SKIP_NONE_PLUS ||
-	  		 skipType00 == VirtualKey::SKIP_NONE_MINUS){
+		if(skipType00 == VirtualKey::SKIP_NONE_FORWARD ||
+	  	   skipType00 == VirtualKey::SKIP_NONE_BACK){
+			// skip00[1-wsdMAX] = 0;	// 2011.05.01 SKIP_PREなどを実行した後でスキップ設定をクリアしないと、誤動作するので｡
 			replace_num00 = 1;
 		} else {	// 2011.04.05(火)
+			// skip00[1-wsdMAX] = 0;	// 2011.05.01 SKIP_PREなどを実行した後でスキップ設定をクリアしないと、誤動作するので｡
 			if(skipType00 == VirtualKey::SKIP_EISUU_KANA){
 				skip00[VirtualKey::wsdEISU] = 1;	// 英字モードをスキップ
 				skip00[VirtualKey::wsdHIRA] = 1;	// ひらがなモード
@@ -1225,7 +1226,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 			} else if(skipType00 == VirtualKey::SKIP_EISUU){
 				skip00[VirtualKey::wsdEISU] = 1;	// 英字モード
 				replace_num00 = 3;
-			} else {	// SKIP_PRE_PLUS(MINUS)
+			} else {	// SKIP_PRE_FORWARD(BACK)
 				replace_num00 = 2;
 				// スキップするのは前のモードなので､それは以下のget_index_for_replaceWSD関数の中で与えられる｡
 			}
@@ -1273,7 +1274,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 	if(params.ex_iskeydown){
 	  bool result00 = false;	//2011.04.16(土)
-	  if(learn_workspacedata){
+	  if(!ignore_improveIM){
 		result00 = VirtualKey::replace_WSD(newkeycode_, newflag_);	//作業用のworkspacedataをすり替える｡
 	  }
 	  if(result00){	//学習済ですり替えられたので､次のキー入力時にCore.cppでの更新をしないようにする。
@@ -1367,8 +1368,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 		// VK_RESTOREを含むキーの連打遅延対策あるいは入力モード変更キー押下時の遅延対策のため作業用のworkspacedataへすり替え
 		// 連打遅延対策あるいは学習機能を切り替えるチェックボックスの設定がオンの場合のみ｡
 		// 2011.02.10(木)、20(日)、03.08(火)
-		!(Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore) ||
-		  Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata)) ? 
+		Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_remap_jis_ignore_improvement_IM_changing) ? 
 			savedinputmodedetail_ = CommonData::getcurrent_workspacedata().inputmodedetail :
 			savedinputmodedetail_ = VirtualKey::getwsd_public().inputmodedetail;
         currentinputmodedetail_ = savedinputmodedetail_;
@@ -1396,7 +1396,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 		// 「workspacedataの学習」を行うかどうかのチェックボックスがオンの場合のみ。
 		// リストアするということは既に学習済なので､INT_DOが必要なケースは無い｡
 		// 2011.03.07(月)、08(火)
-		if(Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_learn_workspacedata)){
+		if(!Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_remap_jis_ignore_improvement_IM_changing)){
 		  VirtualKey::restore_WSD(savedinputmodedetail_);
 		  VirtualKey::static_set_pass_initialize(VirtualKey::INIT_NOT);	//次のキー入力時にCore.cppでの更新をしないため
 		}
@@ -1476,7 +1476,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 //Haci
 	// 半角カタカナ、全角英数にも戻れるようにする｡
-	// 「Option+かな」(AINU)は「ことえり」で誤動作するケースがあることがVK_COMMAND_SPACEの処理で判明したので､
+	// 「Option+かな」(AINU)は「ことえり」で誤動作するケースがあることがVK_JIS_IM_CHANGEの処理で判明したので､
 	//  ここでもControl+Shift系のショートカットを用いるようにした。
 	//  英数モードなども同様にした方がいいかもしれない｡
 	// 2011.4.12

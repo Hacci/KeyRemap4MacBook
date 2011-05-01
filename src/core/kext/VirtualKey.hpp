@@ -54,7 +54,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 
 //Haci
-    static void reverse_sign_REPLACE_PLUS_MINUS(int when00);	//2011.04.06(水)
+    static void reverse_sign_CHANGE_SKIP(int when00);	//2011.04.06(水)
     static const BridgeWorkSpaceData& getwsd_public(void) { return wsd_public_; }  //2011.01.13(木)
     static bool control_WSD(int mode00, KeyCode modekey00, Flags flag00, InputModeDetail IMDsaved00);	//2011.03.10(木)
     static bool update_WSD(void){	// WSD(作業用のworkspacedata)の更新のみ
@@ -91,10 +91,10 @@ namespace org_pqrs_KeyRemap4MacBook {
       	EISUU_OTHERS = 4,	//2011.04.15(金)
       	//skipの種類	
       	// 2011.04.15(金)
-      	SKIP_NONE_PLUS    = 0,
-      	SKIP_NONE_MINUS   = 1,
-      	SKIP_PRE_PLUS     = 2,
-      	SKIP_PRE_MINUS    = 3,
+      	SKIP_NONE_FORWARD = 0,
+      	SKIP_NONE_BACK    = 1,
+      	SKIP_PRE_FORWARD  = 2,
+      	SKIP_PRE_BACK     = 3,
       	SKIP_EISUU_KANA   = 4,
       	SKIP_KANA         = 5,
       	SKIP_EISUU        = 6,
@@ -231,13 +231,13 @@ namespace org_pqrs_KeyRemap4MacBook {
 	// sign00 : 符号(+1,-1を与える)
 	// skip[ii] != 0: ii番目のモードをスキップさせる時に指定する。
 	//			 = 0: スキップしない。 
-	// replace_num00 = SKIP_NONE_PLUS/MINUS(タイプ1):	 ... スキップしない。
-	//				 = SKIP_PRE_PLUS/MINUS (タイプ2):	 ... 前のモードをスキップ
+	// replace_num00 = SKIP_NONE_FORWARD/BACK(タイプ1):	 ... スキップしない。
+	//				 = SKIP_PRE_FORWARD/BACK (タイプ2):	 ... 前のモードをスキップ
 	//				 = SKIP_EISUU_KANA/EISUU/KANA(タイプ3)... 特定のモードをスキップ
 	//	タイプ3の場合､符号sign_plus_minus2_は、同じキーを連続して押している間は､同じ値である。
 	// 				基本的には、別のキーを押した後には､逆転させる。
 	//				但し、例えば英数モードの後は必ず全角英数にするために、符号をスマートに制御することで実現する｡そのため、wsd_save_配列の順番には意味がある｡
-	// 				まずは、Handle_VK_JIS_COMMAND_SPACEのキーダウンしたときに､カウントアップして、
+	// 				まずは、Handle_VK_JIS_IM_CHANGEのキーダウンしたときに､カウントアップして、
 	// 				Core.cppでは、リマップ前とリマップ後にカウンターが増えたかどうかを調べる。
 	// 				カウンターが増えなかったら､符号を逆転させる。そうなるのは、別のキーが押された場合か､
 	// 				あるいは、例えば､「Shift+かな」にSKIP_EISUU_KANAを設定した場合で言えば､Shiftキーを一旦アップしてもう一度Shiftキーをダウンした時も含まれる。
@@ -281,7 +281,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 			// 1つ前が半角カタカナモードでなければ､順方向に進めることで、半角カタカナモードになる｡		
 			//  (英数←→ひらがな間でひらがなとして使用している時に､その他のモードがカタカナ以外のケースで､カタカナになった場合も含む)
 			// 条件14: 現在が半角カタカナモードのとき、1つ前がカタカナなら、順方向に進めることで､その他のモードになる｡
-		if(replace_num00 == 2){	// SKIP_PRE_PLUS/MINUS (タイプ2)
+		if(replace_num00 == 2){	// SKIP_PRE_FORWARD/BACK (タイプ2)
 			// 2011.04.15(金)
 			skip[pre_index2_] = 1;	//前のモードをスキップする｡
 
@@ -379,9 +379,9 @@ namespace org_pqrs_KeyRemap4MacBook {
 //Haci
     static BridgeWorkSpaceData wsd_public_;		// 2011.01.13(木)
     static BridgeWorkSpaceData wsd_save_[wsdMAX+1];	// 2011.03.05(土) 学習用
-    static int pre_index2_;					//2011.03.29(火) VK_JIS_COMMAND_SPACE用
-    static int cur_index2_;					//2011.03.29(火) VK_JIS_COMMAND_SPACE用
-    static int others_index2_;				//2011.04.05(火) VK_JIS_COMMAND_SPACE用
+    static int pre_index2_;					//2011.03.29(火) VK_JIS_IM_CHANGE用
+    static int cur_index2_;					//2011.03.29(火) VK_JIS_IM_CHANGE用
+    static int others_index2_;				//2011.04.05(火) VK_JIS_IM_CHANGE用
     static int sign_plus_minus2_;			//2011.04.06(水) REPLACE_PLUS_MINUS用の符号
     static int counter_plus_minus2_;		//2011.04.06(水) REPLACE_PLUS_MINUS用の連続実行をカウントする。
     static int pre_counter_plus_minus2_;	//2011.04.06(水) REPLACE_PLUS_MINUS用のリマップ前の上記カウンター値
@@ -502,7 +502,7 @@ namespace org_pqrs_KeyRemap4MacBook {
 //Haci
   // ----------------------------------------------------------------------
   // 2011.03.29(火)
-  class Handle_VK_JIS_COMMAND_SPACE {
+  class Handle_VK_JIS_IM_CHANGE {
   public:
     static bool handle(const Params_KeyboardEventCallBack& params);
 
