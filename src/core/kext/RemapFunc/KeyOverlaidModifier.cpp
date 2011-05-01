@@ -173,9 +173,9 @@ namespace org_pqrs_KeyRemap4MacBook {
 
 
 //Haci
-            } else if(Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_ignore_vk_jis_temporary_restore)) {
+            } else if(!Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_remap_jis_ignore_improvement_IM_changing)) {
             	//タイムアウト後にfromKeyを押し続けて何もしないままキーアップしてそのキーが捨てられるので、ここでは元々は何もしないが、
-				// VK_JIS_TEMPORARY_RESTOREを無視するチェックボックスがオンの場合は､リストアを実行する。
+				// IM改良無効のチェックボックスがオフの場合は､リストアを実行する。
 				// これは、最初のkeytokey_.remapのところでリストアしないので､機能キーを捨てる時は、リストアしなければならない。
 				// これが必要な例は､「3」キーを半角にリマップするキーを押して、モードが元に戻る前に､
 				// KeyOverlaidModifierのキーを押すと、押している間はモードが戻らず､キーアップしてもここでリストアしないと､そのままモードは戻らない。

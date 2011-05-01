@@ -168,10 +168,8 @@ namespace org_pqrs_KeyRemap4MacBook {
 			// つまり、キーアップから例えば1000ms後まで次のキー入力がなければ､このルーチンが自動的に実行される｡
 			// タイムアウト前に次のキーが押されると(つまり、連打)､Core.cppでこのタイマーは停止するようにしてある。
 			pass_initialize2_ = INIT_DO;	//次のキー入力時に､Core.cppで作業用のworkspaces値などを必ず初期化させるため。
-		} else if(callback2_ == CALLBACK_RESTORE && 
-				  Config::get_essential_config(BRIDGE_ESSENTIAL_CONFIG_INDEX_general_restore_after_timeout)){
+		} else if(callback2_ == CALLBACK_RESTORE){
 			// VK_JIS_TEMPORARY_RESTOREを無視した時にこのタイマーを起動した場合は、ここでリストアする｡これは見た目の問題｡
-			// ただし、タイムアウト後のリストア実行用のチェックボックスがオンの場合のみ。
 			// 2011.03.08(火)
 			EventOutputQueue::FireKey::fire_downup(Flags(0), KeyCode::VK_JIS_TEMPORARY_RESTORE, CommonData::getcurrent_keyboardType()); //モードを元に戻すだけ｡
 			pass_initialize2_ = INIT_NOT;	// 元に戻るだけなので､次のキー入力時に､Core.cppで作業用のworkspaces値などを初期化させないため。
